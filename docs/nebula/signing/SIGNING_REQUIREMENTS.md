@@ -66,9 +66,9 @@
 
 **条件性可二签；未实测，不能保证该版本万能签支持此完整多扩展包。** 未获得工具版本或本地运行证据，也没有可核实的完整 7-profile/ExtensionKit/自定义运行时字段支持证据；不把名称相近的签名工具当成同一产品。
 
-必须具备：保留 PlugIns 与 Extensions 中全部扩展；逐 Bundle ID 指定 profile；递归签名全部动态 Framework/dylib 和扩展、最后签主 App；保留正确 entitlements；支持当前 iOS 所需签名格式/DER；完整处理上述运行时标识。若工具只能选择一份 profile、仅改主 Bundle ID、自动移除扩展或丢掉 NE/App Groups，则**不满足本项目签名要求**。不得靠“忽略权限错误”继续安装。
+必须具备：保留 PlugIns 与 Extensions 中全部扩展；逐 Bundle ID 指定 profile；递归签名全部动态 Framework/dylib 和扩展、最后签主 App；保留正确 entitlements；支持当前 iOS 所需签名格式/DER；完整处理上述运行时标识。若工具对所有组件强制套用同一份 profile（且不能保留或映射各扩展自己的 profile）、仅改主 Bundle ID、自动移除扩展或丢掉 NE/App Groups，则**不满足本项目签名要求**。不得靠“忽略权限错误”继续安装。
 
-不把 P12/私钥、密码、profile 发送到其在线签名网页；仅在用户已信任、确认材料保存在本机的签名环境操作。未能确认本地处理时，不输入私钥。构建流程不接收这些输入，也没有相关 Secrets。
+不把 P12/私钥、密码、profile 发送到其在线签名网页；仅在用户已信任、确认材料保存在本机的签名环境操作。未能确认本地处理时，不输入私钥。构建流程不接收这些输入，也没有相关 Secrets。已签名 IPA 内含各组件的 embedded.mobileprovision，属于私有交付，也不得上传公开仓库或公开 Artifact。
 
 ## 不覆盖官方安装
 

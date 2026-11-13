@@ -19,6 +19,12 @@ Code `cdb1d15` passed [unsigned device compilation and 3 fixture UI tests](https
 
 Unsigned compilation and Simulator tests do not establish that a signed IPA can operate a real VPN. No signing private keys, credentials, or real subscriptions are included.
 
+## Unsigned Release delivery
+
+The dedicated [Release workflow](.github/workflows/ios-release-unsigned.yml) produces a complete unsigned Payload IPA and preserves the full app/archive. [Run 43419126885](https://github.com/zero04578888-cmyk/sing-box-for-apple/actions/runs/43419126885) passed on code `69b15b7`, Xcode 26.2, with 19 source checks. The workflow uses a standard Intel macOS runner after an ARM64 capacity failure; the device output remains iOS arm64.
+
+See [build results and download](docs/nebula/signing/BUILD_RESULTS.md), [signing requirements](docs/nebula/signing/SIGNING_REQUIREMENTS.md), [re-signing steps](docs/nebula/signing/RESIGN_INSTALL.md), and the [physical-device checklist](docs/nebula/signing/DEVICE_VPN_CHECKLIST.md). The full package contains seven profile-bearing bundles. Its public placeholder identity must be mapped to separately authorized IDs and profiles before signing. No signed installation or real VPN validation has been performed; no App Store installation is replaced or removed.
+
 ## License
 
 ```

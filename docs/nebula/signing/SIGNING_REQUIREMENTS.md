@@ -8,6 +8,8 @@
 
 本次独立工作流：`.github/workflows/ios-release-unsigned.yml`，手动触发，SFI / Release / generic/platform=iOS，禁用开发者签名。优先生成 xcarchive；归档失败时保留具体错误并尝试真实 Release build。通过结构、机型平台、Mach-O 与依赖检查后，使用完整 App 创建 `Payload/sing-box.app` 的 ZIP，命名为 `NEBULA-Release-Unsigned.ipa`。
 
+初始使用标准 macos-15 ARM64，已成功生成过完整 Release IPA。后续核对运行 43416381403 因 GitHub ARM64 容量不足、未分配 runner 而失败，没有执行代码。为避免重复排队，Release 工作流改用 GitHub 文档列出的标准 `macos-15-intel`；不使用 `-large` / `-xlarge`。实际 Xcode/SDK 仍需预检，实际 host 架构与系统版本分别保存在 runner-architecture.txt、macos.txt；目标产物始终是 iOS arm64。
+
 这是**手工打包的无开发者签名 IPA**，不是 `xcodebuild -exportArchive` 的已签名导出，不可直接据此安装或宣称 VPN 可用。未运行依赖账户/描述文件的签名导出。预编译 Framework 中如有供应商签名，不代表已为用户签名；二签必须覆盖全部内嵌代码。
 
 实际成功的 Release commit、Xcode、产物数量和下载链接以最终构建记录、`build-logs/commit.txt`、`xcode.txt`、`release-inventory.json` 为准；未完成的运行不能记录为通过。
@@ -80,5 +82,6 @@
 - [Apple：App Extension Programming Guide](https://developer.apple.com/library/archive/documentation/General/Conceptual/ExtensibilityPG/ExtensionCreation.html)：容器 App 与内嵌扩展都必须签名。
 - [Apple TN2415](https://developer.apple.com/library/archive/technotes/tn2415/)：签名 entitlement 必须得到 profile 授权。
 - [Apple：Network Extensions entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.networking.networkextension)：packet-tunnel-provider。
+- [GitHub：标准托管 runner](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job)：macos-15-intel 为标准 Intel 标签，与 larger runner 标签不同。
 
 构建、结构验证和二签准备都不能替代签名安装及真实 VPN 数据面的验收。

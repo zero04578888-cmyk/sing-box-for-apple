@@ -12,7 +12,8 @@ concurrency:
 
 jobs:
   release:
-    runs-on: macos-15
+    # Standard Intel image avoids the ARM64 hosted-runner capacity failure observed in run 43416381403.
+    runs-on: macos-15-intel
     timeout-minutes: 90
     env:
       DISABLE_SWIFTLINT: '1'
@@ -35,6 +36,8 @@ jobs:
           python3 ci/select_xcode.py
           xcodebuild -version | tee build-logs/xcode.txt
           xcodebuild -showsdks > build-logs/sdks.txt
+          uname -m > build-logs/runner-architecture.txt
+          sw_vers > build-logs/macos.txt
           git rev-parse HEAD > build-logs/commit.txt
           python3 ci/preflight.py --source-only --check-xcode
           python3 -m unittest discover -s ci -p 'test_*.py' -v

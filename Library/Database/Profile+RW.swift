@@ -9,7 +9,7 @@ public extension Profile {
         case .local, .remote:
             return try String(contentsOf: FilePath.sharedDirectory.appendingPathComponent(path))
         case .icloud:
-            return try String(contentsOf: FilePath.iCloudDirectory.appendingPathComponent(path))
+            return try String(contentsOf: FilePath.requireICloudDirectory().appendingPathComponent(path))
         }
     }
 
@@ -21,7 +21,7 @@ public extension Profile {
         case .local, .remote:
             try content.write(to: FilePath.sharedDirectory.appendingPathComponent(path), atomically: true, encoding: .utf8)
         case .icloud:
-            try content.write(to: FilePath.iCloudDirectory.appendingPathComponent(path), atomically: true, encoding: .utf8)
+            try content.write(to: FilePath.requireICloudDirectory().appendingPathComponent(path), atomically: true, encoding: .utf8)
         }
     }
 
@@ -33,7 +33,7 @@ public extension Profile {
             case .local, .remote:
                 return try String(contentsOf: FilePath.sharedDirectory.appendingPathComponent(path))
             case .icloud:
-                return try String(contentsOf: FilePath.iCloudDirectory.appendingPathComponent(path))
+                return try String(contentsOf: FilePath.requireICloudDirectory().appendingPathComponent(path))
             }
         }
     }
@@ -47,7 +47,7 @@ public extension Profile {
             case .local, .remote:
                 try content.write(to: FilePath.sharedDirectory.appendingPathComponent(path), atomically: true, encoding: .utf8)
             case .icloud:
-                try content.write(to: FilePath.iCloudDirectory.appendingPathComponent(path), atomically: true, encoding: .utf8)
+                try content.write(to: FilePath.requireICloudDirectory().appendingPathComponent(path), atomically: true, encoding: .utf8)
             }
         }
     }

@@ -1,5 +1,13 @@
 # sing-box-for-apple
 
+## NEBULA Native VPN branch
+
+This independent `feat/nebula-native-vpn` branch keeps the NEBULA interface and the native sing-box Packet Tunnel path while distributing only SFI and Extension. The [full version](https://github.com/zero04578888-cmyk/sing-box-for-apple/tree/feat/nebula-ui) is preserved.
+
+Main ID: `com.Ekg.IYmq`; provider ID: `com.Ekg.IYmq.extension`; common user-reported authorized Group: `group.64AF44249V.hE6jb4`. The extension profile is **MISSING**; one main profile does not authorize both components. No private signing or device installation is performed.
+
+See [adaptation and feature impact](docs/nebula/native-vpn/README.md), [two-profile requirements/blockers](docs/nebula/native-vpn/SIGNING_BLOCKERS.md), [re-signer/device checklist](docs/nebula/native-vpn/RESIGN_CHECKLIST.md), and the [independent unsigned workflow](.github/workflows/ios-native-vpn-unsigned.yml). Historical full-version signing docs elsewhere do not describe this two-component package.
+
 Experimental iOS/macOS/tvOS client for sing-box, the universal proxy platform.
 
 ## Documentation

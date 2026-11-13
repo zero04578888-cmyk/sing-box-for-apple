@@ -53,7 +53,9 @@ public struct NewProfileView: View {
     private static var profileTypeOptions: [FormPickerOption<ProfileType>] {
         var options = [FormPickerOption(ProfileType.local, String(localized: "Local"))]
         #if !os(tvOS)
-            options.append(FormPickerOption(ProfileType.icloud, String(localized: "iCloud")))
+            if !Variant.nativeVPNOnly {
+                options.append(FormPickerOption(ProfileType.icloud, String(localized: "iCloud")))
+            }
         #endif
         options.append(FormPickerOption(ProfileType.remote, String(localized: "Remote")))
         return options

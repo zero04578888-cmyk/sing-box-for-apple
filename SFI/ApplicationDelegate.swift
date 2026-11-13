@@ -107,7 +107,9 @@ class ApplicationDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCe
             } catch {
                 NSLog("setup report transfer server error: \(error.localizedDescription)")
             }
-            registerFileProviderDomain()
+            if !Variant.nativeVPNOnly {
+                registerFileProviderDomain()
+            }
         }
     }
 

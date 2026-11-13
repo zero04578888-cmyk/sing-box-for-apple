@@ -39,6 +39,13 @@ public enum FilePath {
 
     #endif
 
+    public static func requireICloudDirectory() throws -> URL {
+        guard !Variant.nativeVPNOnly else {
+            throw NSError(domain: "NativeVPN", code: 1, userInfo: [NSLocalizedDescriptionKey: String(localized: "iCloud profiles are unavailable in the native VPN build. Import the file as a Local profile.")])
+        }
+        return iCloudDirectory
+    }
+
     public static var iCloudDirectory = FileManager.default.url(forUbiquityContainerIdentifier: nil)?.appendingPathComponent("Documents", isDirectory: true) ?? URL(string: "stub")!
 }
 

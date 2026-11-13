@@ -132,7 +132,7 @@ public final class NewProfileViewModel: BaseViewModel {
             }
             savePath = "configs/config_\(nextProfileID).json"
         } else if profileType == .icloud {
-            let iCloudDirectory = FilePath.iCloudDirectory
+            let iCloudDirectory = try FilePath.requireICloudDirectory()
             try await BlockingIO.run {
                 if !FileManager.default.fileExists(atPath: iCloudDirectory.path) {
                     try FileManager.default.createDirectory(at: iCloudDirectory, withIntermediateDirectories: true)

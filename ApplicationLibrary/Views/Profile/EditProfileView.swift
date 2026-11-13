@@ -59,7 +59,11 @@ public struct EditProfileView: View {
             } footer: {
                 if profile.type == .icloud {
                     let fileName = profile.path.isEmpty ? String(localized: "FileName") : profile.path
-                    Text("File will be located at iCloud Drive/sing-box/\(fileName)")
+                    if Variant.nativeVPNOnly {
+                        Text("iCloud profiles are unavailable in the native VPN build. Import the file as a Local profile.")
+                    } else {
+                        Text("File will be located at iCloud Drive/sing-box/\(fileName)")
+                    }
                 }
             }
             if profile.type == .remote {

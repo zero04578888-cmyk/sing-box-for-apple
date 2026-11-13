@@ -141,6 +141,9 @@ public class ProfileServer {
             let profiles = try await ProfileManager.list()
             let encoder = LibboxProfileEncoder()
             for profile in profiles {
+                if Variant.nativeVPNOnly && profile.type == .icloud {
+                    continue
+                }
                 let preview = LibboxProfilePreview()
                 preview.profileID = profile.mustID
                 preview.name = profile.name

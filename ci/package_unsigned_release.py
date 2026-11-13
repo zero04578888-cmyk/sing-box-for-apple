@@ -13,14 +13,9 @@ import re
 import shutil
 import subprocess
 
-EXTENSIONS = {
-    "Extension": "extension",
-    "WidgetExtension": "widget",
-    "FileProviderExtension": "fileprovider",
-    "ShareExtension": "share",
-    "ActionExtension": "action",
-    "IntentsExtension": "intents",
-}
+from native_vpn import IDENTITY, validate_identity
+
+EXTENSIONS = {"Extension": "extension"}
 UPSTREAM = "io.nekohasekai.sfamt"
 FORBIDDEN = {".p12", ".pfx", ".p8", ".key", ".mobileprovision", ".provisionprofile"}
 PRIVATE_PEM = re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----\s+[A-Za-z0-9+/=\r\n]{32,}-----END (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----")
@@ -29,32 +24,6 @@ PRIVATE_PEM = re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE 
 def read_plist(path):
     with path.open("rb") as stream:
         return plistlib.load(stream)
-
-
-def resolve_icloud_dictionary_key(app, base):
-    """Normalize the known source container key only in the isolated unsigned product.
-
-    Keep the shared source Info.plist unchanged for ordinary Xcode builds. Xcode
-    expands values but not dictionary keys, so the release variant must explicitly
-    retarget this key. Unknown containers still fail inventory validation.
-    """
-    path = app / "Info.plist"
-    original = path.read_bytes()
-    info = plistlib.loads(original)
-    if info.get("BasePackageIdentifier") != base:
-        raise ValueError("Cannot normalize a container for a different runtime identity.")
-    if base == UPSTREAM or base.startswith(UPSTREAM + "."):
-        return None
-    containers = info.get("NSUbiquitousContainers", {})
-    template = "iCloud.$(BASE_PACKAGE_IDENTIFIER)"
-    known_keys = {template, "iCloud." + UPSTREAM}
-    if len(containers) != 1 or next(iter(containers)) not in known_keys:
-        return None
-    source_key = next(iter(containers))
-    info["NSUbiquitousContainers"] = {"iCloud." + base: containers[source_key]}
-    path.write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_BINARY if original.startswith(b"bplist00") else plistlib.FMT_XML))
-    return {"path": "Info.plist", "key": "NSUbiquitousContainers", "from": source_key, "to": "iCloud." + base,
-            "beforeSHA256": hashlib.sha256(original).hexdigest(), "afterSHA256": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
 def check_public_tree(root):
@@ -75,6 +44,7 @@ def inventory(app, base, group):
         raise ValueError("A concrete reverse-DNS base identifier is required.")
     if base == UPSTREAM or base.startswith(UPSTREAM + ".") or group == "group." + UPSTREAM:
         raise ValueError("Upstream identity/container is forbidden for the side-by-side delivery.")
+    validate_identity(base, group)
     check_public_tree(app)
     paths = [app, *sorted(app.rglob("*.appex"))]
     expected = {base, *(f"{base}.{suffix}" for suffix in EXTENSIONS.values())}
@@ -86,6 +56,8 @@ def inventory(app, base, group):
         if identifier in actual:
             raise ValueError(f"Duplicate bundle identifier: {identifier}")
         actual.add(identifier)
+        if info.get("NebulaNativeVPNOnly") is not True:
+            raise ValueError(f"Missing native VPN distribution marker: {bundle.name}")
         executable = info.get("CFBundleExecutable", "")
         if not executable or not (bundle / executable).is_file():
             raise ValueError(f"Missing executable for {bundle.name}")
@@ -99,8 +71,8 @@ def inventory(app, base, group):
         if bundle == app:
             if info.get("BGTaskSchedulerPermittedIdentifiers") != [base + ".update_profiles"]:
                 raise ValueError("Background-task identifier does not match runtime identity.")
-            if set(info.get("NSUbiquitousContainers", {})) != {"iCloud." + base}:
-                raise ValueError("iCloud document container still uses a different identity.")
+            if "NSUbiquitousContainers" in info:
+                raise ValueError("iCloud document containers are not authorized for this native VPN build.")
         result.append({"path": "." if bundle == app else bundle.relative_to(app).as_posix(),
                        "bundleID": identifier, "executable": executable, "extensionPoint": point,
                        "basePackageIdentifier": base, "appGroup": group,
@@ -177,7 +149,6 @@ def main():
     settings = {entry["target"]: entry["buildSettings"] for entry in json.loads(args.build_settings.read_text())}
     base = settings["SFI"]["BASE_PACKAGE_IDENTIFIER"]
     group = settings["SFI"]["APP_GROUP_IDENTIFIER"]
-    normalization = resolve_icloud_dictionary_key(args.app, base)
     apps = inventory(args.app, base, group)
     code = inspect_macho(args.app)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -186,6 +157,10 @@ def main():
     for target in ["SFI", *EXTENSIONS]:
         target_settings = settings[target]
         entitlements = expand(read_plist(root / target_settings["CODE_SIGN_ENTITLEMENTS"]), target_settings)
+        expected = {"com.apple.developer.networking.networkextension": ["packet-tunnel-provider"],
+                    "com.apple.security.application-groups": [group]}
+        if entitlements != expected:
+            raise ValueError(f"Unexpected optional entitlement: {target}")
         if entitlements.get("com.apple.security.application-groups") != [group]:
             raise ValueError(f"Inconsistent requested App Group: {target}")
         if target in {"SFI", "Extension"} and "packet-tunnel-provider" not in entitlements.get("com.apple.developer.networking.networkextension", []):
@@ -195,8 +170,10 @@ def main():
               "runID": os.environ.get("GITHUB_RUN_ID"), "configuration": "Release", "platform": "iPhoneOS",
               "packaging": "Manual Payload IPA from unsigned device build; not xcodebuild -exportArchive",
               "developerSigning": "NOT_PERFORMED", "deviceVPNValidation": "NOT_PERFORMED",
-              "placeholderIdentity": True, "mainBundleID": base, "vpnBundleID": base + ".extension", "appGroup": group,
-              "unsignedMetadataNormalization": normalization,
+              "placeholderIdentity": False, "mainBundleID": base, "vpnBundleID": base + ".extension", "appGroup": group,
+              "distribution": "native-vpn", "authorizationEvidence": IDENTITY["groupAuthorizationEvidence"],
+              "extensionProfileStatus": "MISSING", "signatureReadiness": "BLOCKED_EXTENSION_PROFILE_REQUIRED",
+              "removedCapabilities": ["iCloud", "WidgetExtension", "IntentsExtension", "FileProviderExtension", "ShareExtension", "ActionExtension", "wifi-info entitlement", "multicast entitlement"],
               "requiredProfileCount": len(apps), "bundles": apps, "machO": code,
               "frameworks": [path.relative_to(args.app).as_posix() for path in sorted(args.app.rglob("*.framework"))],
               "swiftSystemLibraries": "Unbundled libswift dependencies are supplied by the supported iOS runtime; actual loading requires device validation."}
@@ -204,7 +181,7 @@ def main():
     payload = args.output / "ipa-staging" / "Payload"
     payload.mkdir(parents=True, exist_ok=True)
     shutil.copytree(args.app, payload / args.app.name, symlinks=True)
-    ipa = args.output / "NEBULA-Release-Unsigned.ipa"
+    ipa = args.output / "NEBULA-NativeVPN-Unsigned.ipa"
     subprocess.run(["ditto", "-c", "-k", "--norsrc", "--keepParent", str(payload), str(ipa)], check=True)
     (args.output / "SHA256SUMS.txt").write_text(f"{hashlib.sha256(ipa.read_bytes()).hexdigest()}  {ipa.name}\n")
     check_public_tree(args.output)

@@ -1,101 +1,103 @@
-"""Packaging invariants; fixture files are not executable iOS build evidence."""
+"""Native VPN boundaries; fixtures are not signed iOS build evidence."""
 import plistlib
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
-from package_unsigned_release import EXTENSIONS, UPSTREAM, check_public_tree, inventory, resolve_icloud_dictionary_key
+from native_vpn import IDENTITY, validate_identity, validate_sources
+from package_unsigned_release import UPSTREAM, check_public_tree, inventory
 
 
-class ReleasePackageTests(unittest.TestCase):
-    base = "io.example.nebula"
-    group = "group.io.example.nebula"
+class NativeVPNPackageTests(unittest.TestCase):
+    base = IDENTITY["baseBundleID"]
+    group = IDENTITY["appGroup"]
 
-    def make_app(self, root):
-        app = Path(root) / "sample.app"
-        for name, suffix in [("sample", ""), *EXTENSIONS.items()]:
-            bundle = app if not suffix else app / ("Extensions" if name == "IntentsExtension" else "PlugIns") / (name + ".appex")
-            bundle.mkdir(parents=True, exist_ok=True)
-            info = {"CFBundleIdentifier": self.base + ("." + suffix if suffix else ""),
-                    "CFBundleExecutable": name, "CFBundleSupportedPlatforms": ["iPhoneOS"],
-                    "BasePackageIdentifier": self.base, "AppGroupIdentifier": self.group}
+    def make_app(self, folder):
+        app = Path(folder) / "sing-box.app"
+        for name, suffix in [("sing-box", ""), ("Extension", ".extension")]:
+            bundle = app if not suffix else app / "PlugIns/Extension.appex"
+            bundle.mkdir(parents=True)
+            info = {"CFBundleIdentifier": self.base + suffix, "CFBundleExecutable": name,
+                    "CFBundleSupportedPlatforms": ["iPhoneOS"], "BasePackageIdentifier": self.base,
+                    "AppGroupIdentifier": self.group, "NebulaNativeVPNOnly": True}
             if not suffix:
-                info.update({"BGTaskSchedulerPermittedIdentifiers": [self.base + ".update_profiles"],
-                             "NSUbiquitousContainers": {"iCloud." + self.base: {}}})
-            if suffix == "extension":
+                info["BGTaskSchedulerPermittedIdentifiers"] = [self.base + ".update_profiles"]
+            else:
                 info["NSExtension"] = {"NSExtensionPointIdentifier": "com.apple.networkextension.packet-tunnel"}
             (bundle / "Info.plist").write_bytes(plistlib.dumps(info))
             (bundle / name).write_bytes(b"fixture, not Mach-O")
         return app
 
-    def test_all_six_extensions_are_required(self):
-        with tempfile.TemporaryDirectory() as directory:
-            app = self.make_app(directory)
-            self.assertEqual(len(inventory(app, self.base, self.group)), 7)
-            (app / "PlugIns/Extension.appex/Info.plist").unlink()
-            with self.assertRaises(FileNotFoundError):
+    def test_sfi_dependency_graph_and_minimal_capabilities(self):
+        report = validate_sources()
+        self.assertEqual(report["targets"], ["ApplicationLibrary", "Extension", "Library", "SFI"])
+        self.assertEqual(report["requiredProfiles"], 2)
+        self.assertEqual(report["extensionProfileStatus"], "MISSING")
+
+    def test_exact_user_identity_and_group_required(self):
+        validate_identity(self.base, self.group)
+        with self.assertRaisesRegex(ValueError, "exact user-reported"):
+            validate_identity(self.base, "group." + self.base)
+        with self.assertRaisesRegex(ValueError, "user-specified"):
+            validate_identity("com.other.app", self.group)
+
+    def test_exactly_two_components_and_vpn_required(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = self.make_app(folder)
+            self.assertEqual(len(inventory(app, self.base, self.group)), 2)
+            shutil.rmtree(app / "PlugIns/Extension.appex")
+            with self.assertRaisesRegex(ValueError, "Incomplete"):
+                inventory(app, self.base, self.group)
+
+    def test_auxiliary_extension_is_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = self.make_app(folder)
+            extra = app / "PlugIns/WidgetExtension.appex"
+            shutil.copytree(app / "PlugIns/Extension.appex", extra)
+            info = plistlib.loads((extra/"Info.plist").read_bytes())
+            info["CFBundleIdentifier"] = self.base + ".widget"
+            (extra/"Info.plist").write_bytes(plistlib.dumps(info))
+            with self.assertRaisesRegex(ValueError, "Incomplete/unexpected"):
+                inventory(app, self.base, self.group)
+
+    def test_tunnel_group_drift_is_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = self.make_app(folder)
+            path = app / "PlugIns/Extension.appex/Info.plist"
+            info = plistlib.loads(path.read_bytes())
+            info["AppGroupIdentifier"] = "group.not-authorized"
+            path.write_bytes(plistlib.dumps(info))
+            with self.assertRaisesRegex(ValueError, "Inconsistent runtime"):
+                inventory(app, self.base, self.group)
+
+    def test_cloud_metadata_and_missing_variant_marker_are_refused(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = self.make_app(folder)
+            path = app / "Info.plist"
+            info = plistlib.loads(path.read_bytes())
+            info["NSUbiquitousContainers"] = {"iCloud." + self.base: {}}
+            path.write_bytes(plistlib.dumps(info))
+            with self.assertRaisesRegex(ValueError, "not authorized"):
+                inventory(app, self.base, self.group)
+            info.pop("NSUbiquitousContainers")
+            info.pop("NebulaNativeVPNOnly")
+            path.write_bytes(plistlib.dumps(info))
+            with self.assertRaisesRegex(ValueError, "marker"):
                 inventory(app, self.base, self.group)
 
     def test_upstream_identity_is_refused(self):
         with self.assertRaisesRegex(ValueError, "Upstream identity"):
             inventory(Path("not-needed"), UPSTREAM, self.group)
 
-    def test_app_group_drift_is_refused(self):
-        with tempfile.TemporaryDirectory() as directory:
-            app = self.make_app(directory)
-            path = app / "PlugIns/Extension.appex/Info.plist"
-            info = plistlib.loads(path.read_bytes())
-            info["AppGroupIdentifier"] = "group.wrong"
-            path.write_bytes(plistlib.dumps(info))
-            with self.assertRaisesRegex(ValueError, "Inconsistent runtime"):
-                inventory(app, self.base, self.group)
-
-    def test_stale_icloud_container_is_refused(self):
-        with tempfile.TemporaryDirectory() as directory:
-            app = self.make_app(directory)
-            path = app / "Info.plist"
-            info = plistlib.loads(path.read_bytes())
-            info["NSUbiquitousContainers"] = {"iCloud." + UPSTREAM: {}}
-            path.write_bytes(plistlib.dumps(info))
-            with self.assertRaisesRegex(ValueError, "iCloud document container"):
-                inventory(app, self.base, self.group)
-
-    def test_known_dictionary_key_template_is_resolved_without_losing_content(self):
-        with tempfile.TemporaryDirectory() as directory:
-            app = self.make_app(directory)
-            path = app / "Info.plist"
-            info = plistlib.loads(path.read_bytes())
-            info["NSUbiquitousContainers"] = {"iCloud.$(BASE_PACKAGE_IDENTIFIER)": {"NSUbiquitousContainerName": "sing-box"}}
-            path.write_bytes(plistlib.dumps(info))
-            change = resolve_icloud_dictionary_key(app, self.base)
-            self.assertEqual(change["to"], "iCloud." + self.base)
-            self.assertEqual(plistlib.loads(path.read_bytes())["NSUbiquitousContainers"]["iCloud." + self.base]["NSUbiquitousContainerName"], "sing-box")
-            self.assertEqual(len(inventory(app, self.base, self.group)), 7)
-            self.assertIsNone(resolve_icloud_dictionary_key(app, self.base))
-
-    def test_legacy_source_key_is_retargeted_only_for_isolated_runtime_identity(self):
-        with tempfile.TemporaryDirectory() as directory:
-            app = self.make_app(directory)
-            path = app / "Info.plist"
-            info = plistlib.loads(path.read_bytes())
-            info["NSUbiquitousContainers"] = {"iCloud." + UPSTREAM: {"NSUbiquitousContainerName": "sing-box"}}
-            path.write_bytes(plistlib.dumps(info))
-            self.assertEqual(resolve_icloud_dictionary_key(app, self.base)["from"], "iCloud." + UPSTREAM)
-            self.assertEqual(len(inventory(app, self.base, self.group)), 7)
-            with self.assertRaisesRegex(ValueError, "different runtime identity"):
-                resolve_icloud_dictionary_key(app, "io.wrong.identity")
-
-    def test_profile_is_never_public_artifact_input(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "embedded.mobileprovision").write_bytes(b"fixture")
+    def test_profile_and_private_key_never_enter_public_output(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            profile = root / "embedded.mobileprovision"
+            profile.write_bytes(b"fixture")
             with self.assertRaisesRegex(ValueError, "Signing material"):
                 check_public_tree(root)
-
-    def test_complete_private_key_block_is_refused(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            # Deliberately invalid synthetic bytes; no real signing key is used.
+            profile.unlink()
             (root / "unexpected.txt").write_bytes(b"-----BEGIN PRIVATE KEY-----\n" + b"A" * 64 + b"\n-----END PRIVATE KEY-----")
             with self.assertRaisesRegex(ValueError, "Private key block"):
                 check_public_tree(root)

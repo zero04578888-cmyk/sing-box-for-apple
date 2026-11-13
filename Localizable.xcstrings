@@ -1,6 +1,22 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "iCloud profiles are unavailable in the native VPN build. Import the file as a Local profile." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原生 VPN 精简版不支持 iCloud 云端配置，请将文件导入为本地配置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原生 VPN 精簡版不支援 iCloud 雲端設定，請將檔案匯入為本機設定。"
+          }
+        }
+      }
+    },
     "Statistics" : {
       "extractionState" : "manual",
       "localizations" : {

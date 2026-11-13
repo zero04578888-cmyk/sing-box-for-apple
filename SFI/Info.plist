@@ -69,18 +69,6 @@
 			</dict>
 		</array>
 	</dict>
-	<key>NSUbiquitousContainers</key>
-	<dict>
-		<key>iCloud.io.nekohasekai.sfamt</key>
-		<dict>
-			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<true/>
-			<key>NSUbiquitousContainerName</key>
-			<string>sing-box</string>
-			<key>NSUbiquitousContainerSupportedFolderLevels</key>
-			<string>Any</string>
-		</dict>
-	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -141,5 +129,7 @@
 			</dict>
 		</dict>
 	</array>
+	<key>NebulaNativeVPNOnly</key>
+	<true/>
 </dict>
 </plist>

@@ -2,6 +2,13 @@ import Foundation
 import Libbox
 
 public enum Variant {
+    // The native VPN distribution excludes auxiliary extensions and iCloud profiles.
+    #if os(iOS)
+        public static let nativeVPNOnly = Bundle.main.object(forInfoDictionaryKey: "NebulaNativeVPNOnly") as? Bool ?? false
+    #else
+        public static let nativeVPNOnly = false
+    #endif
+
     #if os(macOS)
         public static var useSystemExtension = false
     #else

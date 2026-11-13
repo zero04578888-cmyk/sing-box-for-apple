@@ -76,7 +76,7 @@ public struct CoreView: View {
                                 }
                             }
                         #elseif os(iOS)
-                            if #available(iOS 16.0, *) {
+                            if #available(iOS 16.0, *), !Variant.nativeVPNOnly {
                                 FormButton {
                                     Task {
                                         await openInFilesApp()
@@ -229,7 +229,7 @@ public struct CoreView: View {
                     try Self.clearWorkingDirectoryContents(at: workingDirectory)
                 }
                 #if os(iOS)
-                    if #available(iOS 16.0, *) {
+                    if #available(iOS 16.0, *), !Variant.nativeVPNOnly {
                         await notifyFileProviderWorkingDirectoryChanged()
                     }
                 #endif

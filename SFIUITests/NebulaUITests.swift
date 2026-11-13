@@ -5,6 +5,10 @@ import XCTest
 final class NebulaUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
     private func launch(accessibilitySize: Bool = false) {
         app = XCUIApplication()
         app.launchArguments = ["-FASTLANE_SNAPSHOT", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -55,6 +59,12 @@ final class NebulaUITests: XCTestCase {
         app.tabBars.buttons["Statistics"].tap()
         XCTAssertTrue(app.staticTexts["Live service statistics"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Preview data"].exists)
+        let targetName = app.staticTexts["Local Device"]
+        XCTAssertGreaterThanOrEqual(targetName.frame.minX, app.frame.minX)
+        XCTAssertLessThanOrEqual(targetName.frame.maxX, app.frame.maxX)
+        let rate = app.staticTexts["38 B/s"]
+        XCTAssertGreaterThanOrEqual(rate.frame.minX, app.frame.minX)
+        XCTAssertLessThanOrEqual(rate.frame.maxX, app.frame.maxX)
         capture("Statistics-AccessibilityXXXL")
     }
 

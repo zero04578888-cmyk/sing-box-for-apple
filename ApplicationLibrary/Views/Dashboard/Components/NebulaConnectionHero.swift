@@ -7,18 +7,11 @@ import SwiftUI
 struct NebulaConnectionHero: View {
     @EnvironmentObject private var environments: ExtensionEnvironments
     @EnvironmentObject private var profile: ExtensionProfile
+    @Environment(\.sizeCategory) private var sizeCategory
 
     var body: some View {
         VStack(spacing: 20) {
-            HStack {
-                Text(verbatim: "NEBULA")
-                    .font(.title2.weight(.bold))
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                if Variant.screenshotMode {
-                    Text("Preview data").font(.caption).foregroundStyle(.secondary)
-                }
-            }
+            header
 
             StartStopButton(prominent: true)
                 .buttonStyle(.plain)
@@ -43,19 +36,11 @@ struct NebulaConnectionHero: View {
             .frame(maxWidth: .infinity)
 
             Divider()
-            HStack(spacing: 12) {
-                NavigationLink {
-                    GroupListView().navigationTitle("Groups")
-                } label: {
-                    Label("Groups", systemImage: "rectangle.3.group")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .accessibilityIdentifier("nebula.groups.open")
-                NavigationLink {
-                    ConnectionListView().navigationTitle("Connections")
-                } label: {
-                    Label("Connections", systemImage: "point.3.connected.trianglepath.dotted")
-                        .frame(maxWidth: .infinity, minHeight: 44)
+            Group {
+                if sizeCategory.isAccessibilityCategory {
+                    VStack(spacing: 12) { navigationLinks }
+                } else {
+                    HStack(spacing: 12) { navigationLinks }
                 }
             }
             .font(.subheadline.weight(.medium))
@@ -64,6 +49,47 @@ struct NebulaConnectionHero: View {
         }
         .padding(20)
         .modifier(NebulaSurface())
+    }
+
+    @ViewBuilder private var header: some View {
+        if sizeCategory.isAccessibilityCategory {
+            VStack(alignment: .leading, spacing: 8) {
+                brandTitle
+                previewLabel
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack {
+                brandTitle
+                Spacer()
+                previewLabel
+            }
+        }
+    }
+
+    private var brandTitle: some View {
+        Text(verbatim: "NEBULA").font(.title2.weight(.bold)).accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder private var previewLabel: some View {
+        if Variant.screenshotMode {
+            Text("Preview data").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder private var navigationLinks: some View {
+        NavigationLink {
+            GroupListView().navigationTitle("Groups")
+        } label: {
+            Label("Groups", systemImage: "rectangle.3.group")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .accessibilityIdentifier("nebula.groups.open")
+        NavigationLink {
+            ConnectionListView().navigationTitle("Connections")
+        } label: {
+            Label("Connections", systemImage: "point.3.connected.trianglepath.dotted")
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
     }
 
     private var statusTitle: LocalizedStringKey {

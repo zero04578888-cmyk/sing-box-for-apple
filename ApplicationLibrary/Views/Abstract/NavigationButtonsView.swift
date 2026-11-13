@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 public struct NavigationButtonsView: View {
+    @Environment(\.sizeCategory) private var sizeCategory
     public let showGroupsButton: Bool
     public let showConnectionsButton: Bool
     public let groupsCount: Int
@@ -60,15 +61,19 @@ public struct NavigationButtonsView: View {
                         onConnectionsTap()
                     } label: {
                         HStack(spacing: 12) {
-                            Text(verbatim: "\(connectionsCount)")
+                            if !sizeCategory.isAccessibilityCategory {
+                                Text(verbatim: "\(connectionsCount)")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .fixedSize()
+                            }
                             Label("Connections", systemImage: "list.bullet.rectangle.portrait.fill")
                                 .labelStyle(.iconOnly)
                                 .foregroundStyle(.primary)
                         }
                     }
+                    .accessibilityLabel("Connections")
+                    .accessibilityValue(Text(verbatim: "\(connectionsCount)"))
                 }
                 if showGroupsButton {
                     Divider()
@@ -76,15 +81,19 @@ public struct NavigationButtonsView: View {
                         onGroupsTap()
                     } label: {
                         HStack(spacing: 12) {
-                            Text(verbatim: "\(groupsCount)")
+                            if !sizeCategory.isAccessibilityCategory {
+                                Text(verbatim: "\(groupsCount)")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .fixedSize()
+                            }
                             Label("Groups", systemImage: "rectangle.3.group.fill")
                                 .labelStyle(.iconOnly)
                                 .foregroundStyle(.primary)
                         }
                     }
+                    .accessibilityLabel("Groups")
+                    .accessibilityValue(Text(verbatim: "\(groupsCount)"))
                 }
             }
         }

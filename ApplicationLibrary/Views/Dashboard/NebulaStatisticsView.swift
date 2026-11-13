@@ -11,7 +11,13 @@ public struct NebulaStatisticsView: View {
     public init() {}
 
     public var body: some View {
-        StatisticsContent(commandClient: environments.commandClient)
+        Group {
+            if let profile = environments.extensionProfile, environments.remoteServer == nil {
+                LocalStatisticsContent(profile: profile, commandClient: environments.commandClient)
+            } else {
+                StatisticsContent(commandClient: environments.commandClient, targetRunning: environments.remoteServer != nil)
+            }
+        }
             .environmentObject(environments)
             .onAppear { environments.connect() }
             .onChangeCompat(of: scenePhase) { phase in
@@ -19,13 +25,22 @@ public struct NebulaStatisticsView: View {
             }
     }
 
+    private struct LocalStatisticsContent: View {
+        @ObservedObject var profile: ExtensionProfile
+        let commandClient: CommandClient
+
+        var body: some View {
+            StatisticsContent(commandClient: commandClient, targetRunning: profile.status == .connected)
+        }
+    }
+
     private struct StatisticsContent: View {
         @EnvironmentObject private var environments: ExtensionEnvironments
         @Environment(\.sizeCategory) private var sizeCategory
         @ObservedObject var commandClient: CommandClient
+        let targetRunning: Bool
 
         private var live: Bool {
-            let targetRunning = environments.remoteServer != nil || environments.extensionProfile?.status == .connected
             return targetRunning && commandClient.isConnected && !commandClient.isReconnecting
         }
 

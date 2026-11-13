@@ -159,10 +159,12 @@ jobs:
 
       - name: Prepare iPhone 16 Pro Max Simulator
         if: env.RUN_UI_TESTS == 'true'
+        timeout-minutes: 10
         run: python3 ci/select_simulator.py
 
       - name: Run fixture UI checks with Simulator ad-hoc signing
         if: env.RUN_UI_TESTS == 'true'
+        timeout-minutes: 30
         run: |
           set -euo pipefail
           xcodebuild test -project sing-box.xcodeproj -scheme SFI -configuration Debug \
@@ -171,6 +173,8 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -disableAutomaticPackageResolution -skipPackagePluginValidation \
             -only-testing:SFIUITests/NebulaUITests \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
             CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             2>&1 | tee build-logs/ui-tests.log
 
@@ -184,6 +188,15 @@ jobs:
             echo 'No IPA export, credentials, signing certificates, or real subscriptions are used.'
             echo 'Simulator tests use ad-hoc signing only; no Apple Developer signing identity or provisioning is validated.'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Export native test summary
+        if: always() && env.RUN_UI_TESTS == 'true'
+        run: |
+          set -euo pipefail
+          if [[ -d build/Nebula-UI.xcresult ]]; then
+            xcrun xcresulttool get test-results summary --path build/Nebula-UI.xcresult > build-logs/ui-summary.json
+            xcrun xcresulttool get test-results tests --path build/Nebula-UI.xcresult > build-logs/ui-tests.json
+          fi
 
       - name: Export native UI screenshot attachments
         if: always() && env.RUN_UI_TESTS == 'true'

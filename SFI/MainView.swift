@@ -7,6 +7,8 @@ import SwiftUI
 struct MainView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.sizeCategory) private var sizeCategory
+    @ScaledMetric(relativeTo: .body) private var accessoryLineHeight: CGFloat = 20
     @EnvironmentObject private var environments: ExtensionEnvironments
     @EnvironmentObject private var sendManager: TaildropSendManager
 
@@ -246,7 +248,7 @@ struct MainView: View {
     private var statusBarPill: some View {
         bottomAccessoryContent
             .frame(maxWidth: .infinity)
-            .frame(height: 44)
+            .frame(height: accessoryHeight)
             .modifier(AccessoryPillBackgroundModifier(cornerRadius: 22))
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .padding(.horizontal, 20)
@@ -257,7 +259,7 @@ struct MainView: View {
     private var remoteStatusBarPill: some View {
         remoteAccessoryContent
             .frame(maxWidth: .infinity)
-            .frame(height: 44)
+            .frame(height: accessoryHeight)
             .modifier(AccessoryPillBackgroundModifier(cornerRadius: 22))
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .padding(.horizontal, 20)
@@ -281,7 +283,9 @@ struct MainView: View {
                 onConnectionsTap: { showConnections = true }
             )
             Divider()
-            RemoteUptimeText(commandClient: environments.commandClient)
+            if !sizeCategory.isAccessibilityCategory {
+                RemoteUptimeText(commandClient: environments.commandClient)
+            }
             Button {
                 environments.exitRemoteControl()
             } label: {
@@ -327,7 +331,7 @@ struct MainView: View {
 
     private var bottomAccessoryContent: some View {
         HStack(spacing: 12) {
-            if let profile = environments.extensionProfile {
+            if !sizeCategory.isAccessibilityCategory, let profile = environments.extensionProfile {
                 StatusText(profile: profile)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
@@ -340,11 +344,15 @@ struct MainView: View {
                 onConnectionsTap: { showConnections = true }
             )
             Divider()
-            StartStopButton(showsRuntimeDuration: true)
+            StartStopButton(showsRuntimeDuration: !sizeCategory.isAccessibilityCategory)
         }
         .padding(.horizontal)
         .tint(.primary)
         .buttonStyle(BarItemButtonStyle())
+    }
+
+    private var accessoryHeight: CGFloat {
+        sizeCategory.isAccessibilityCategory ? max(44, accessoryLineHeight + 16) : 44
     }
 
     private struct BarItemButtonStyle: ButtonStyle {

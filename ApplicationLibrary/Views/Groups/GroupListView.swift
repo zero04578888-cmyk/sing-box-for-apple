@@ -46,6 +46,12 @@ public struct GroupListView: View {
 
     private var groupList: some View {
         Group {
+            #if os(iOS)
+            if Variant.screenshotMode {
+                Text("Preview data").font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16)
+            }
+            #endif
             if viewModel.isLoading {
                 ProgressView("Loading...")
             } else {

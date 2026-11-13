@@ -6,6 +6,19 @@ Experimental iOS/macOS/tvOS client for sing-box, the universal proxy platform.
 
 [SFI](https://sing-box.sagernet.org/installation/clients/sfi/) | [SFM](https://sing-box.sagernet.org/installation/clients/sfm/)
 
+## NEBULA iOS interface
+
+This fork develops the NEBULA dark SwiftUI interface for iPhone 16 Pro Max. Existing VPN, proxy, profile, subscription, and remote-control features retain their original service implementations; the sing-box core and network protocols are not edited.
+
+- [Source analysis](docs/nebula/SOURCE_ANALYSIS.md) and [change log](docs/nebula/CHANGELOG.md)
+- [Design system](DESIGN.md)
+- [Validation results](docs/nebula/TEST_RESULTS.md) and [build/device next steps](docs/nebula/NEXT_STEPS.md)
+- [Unsigned iOS workflow](.github/workflows/ios-unsigned.yml): macOS dependency checks and unsigned device compilation, with optional fixture UI tests on Simulator
+
+Code `cdb1d15` passed [unsigned device compilation and 3 fixture UI tests](https://github.com/zero04578888-cmyk/sing-box-for-apple/actions/runs/43380949798) on iPhone 16 Pro Max / iOS 26.2 Simulator.
+
+Unsigned compilation and Simulator tests do not establish that a signed IPA can operate a real VPN. No signing private keys, credentials, or real subscriptions are included.
+
 ## License
 
 ```

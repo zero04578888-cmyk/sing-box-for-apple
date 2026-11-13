@@ -81,7 +81,7 @@
       "name": "Native Tab Navigation",
       "kind": "nav",
       "refersTo": "navigation",
-      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. Shows the native tab names and selected treatment.",
+      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. Shows native tab names; at larger accessibility sizes, group and connection counts move to accessibility values while visual counts are hidden.",
       "html": "<nav class=\"ds-navigation\" aria-label=\"Main navigation\"><button type=\"button\" aria-current=\"page\">Dashboard</button><button type=\"button\">Statistics</button><button type=\"button\">Logs</button><button type=\"button\">Tools</button><button type=\"button\">Settings</button></nav>",
       "css": ".ds-navigation { display: flex; align-items: center; justify-content: space-around; gap: 8pt; padding: 8pt; background: #0E1525; color: #C1C8D6; font: 500 13pt system-ui, sans-serif; } .ds-navigation button { min-width: 44pt; min-height: 44pt; padding: 8pt; border: 0; border-radius: 12pt; background: transparent; color: inherit; font: inherit; } .ds-navigation button[aria-current=page] { color: #7DB3FF; } .ds-navigation button:focus-visible { outline: 2pt solid #B8A1FF; }"
     },

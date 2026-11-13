@@ -1,16 +1,20 @@
 # NEBULA 下一步
 
-## 云端无签名验证
+## 已完成与重跑
 
-1. 选定有写权限的 GitHub 仓库。官方上游为只读；可在自己的账号创建公开 fork，或指定已有仓库。公开 fork 会公开本次源码改动；私有仓库的 macOS runner 可能消耗计费额度，执行前需确认。
-2. 将已审查的 `feat/nebula-ui` 分支提交到该仓库。工作流的 push 触发器会先进行源码检查，再开始 macOS 构建。也可通过 Actions 页面手动运行 **NEBULA unsigned iOS**。
-3. 首次使用 `run_ui_tests=false`。工作流必须先找到 Xcode >=26.2；然后按 `ci/libbox.json` 的固定官方 commit 和 Go 版本构建 iOS arm64 Framework，不改内核源码。首次构建可能耗时较长。
-4. 检查 Libbox 和 SPM 日志。若官方依赖的下载、源码构建或 Swift 接口不兼容，先记录具体错误及版本；不要为消除错误而删减 VPN 功能或用空壳 Framework 代替。
-5. SFI 与所有内嵌扩展使用 `CODE_SIGNING_ALLOWED=NO` 等标志编译。不创建签名钥匙串，不读取证书或真实订阅，不导出 IPA。下载 `nebula-validation-*` 的日志和 `Unsigned-iOS.xcresult` 后才能记录编译 PASS。
-6. 编译通过后，用 `run_ui_tests=true` 再运行工作流，构建所需 Simulator 切片，在已安装的 **iPhone 16 Pro Max** 上执行 `NebulaUITests`。若该设备或运行时未安装，会明确失败；应补齐环境后再测，不替换成别的设备冒充通过。
-7. 从 `Nebula-UI.xcresult` 读取实际截图。当前测试涵盖节点页和大字号首页/统计页；正式视觉验收还需补齐默认字号、各种 VPN 状态、无配置/无节点、订阅更新失败、长节点名、VoiceOver、增强对比度和 Reduce Motion。iPad 在原工程支持范围内，也需要独立捕获/验收。
+公开 fork：[zero04578888-cmyk/sing-box-for-apple](https://github.com/zero04578888-cmyk/sing-box-for-apple)，默认分支 `feat/nebula-ui`。已推送改动，官方上游保持只读。
 
-公开仓库的标准 GitHub 托管 runner 通常不计费，仍以账号/组织当前 Actions 政策为准。本工作流不选 larger runner，不进行任何付费云服务部署。
+[最终运行 43380949798](https://github.com/zero04578888-cmyk/sing-box-for-apple/actions/runs/43380949798) 在代码 `cdb1d15ca10c53fc1455364dcd7a5758af9a0aa4` 上完成：11 项源码测试、无签名 device 编译及 3 项 iPhone 16 Pro Max fixture UI 测试均通过，另完成 iPad Pro 13-inch (M4) 的默认字号首页原生捕获。当前无需等待云端验证。
+
+后续修改代码后，在 fork 的 Actions 页面手动运行 **NEBULA unsigned iOS**：`run_ui_tests=false` 仅检查源码/依赖/device 编译；`true` 另构建 Simulator 切片并运行准确型号的原生 UI 检查。新变更需要新的运行证据，不沿用本次结论。
+
+工作流选用已安装 Xcode >=26.2，按 `ci/libbox.json` 固定的官方 SHA/标签/Go 构建核心依赖，校验锁定 SPM；不修改内核。依赖不存在或下载失败时明确失败，不能以空壳 Framework 代替。device 使用 `CODE_SIGNING_ALLOWED=NO`；Simulator 单独 ad-hoc 签名。日志、结果摘要、xcresult、PNG 作为 `nebula-validation-*` artifact 保留 7 天，不导出 IPA。
+
+公开仓库标准 runner 的计费以 GitHub 账号政策为准。本工作流不选择 larger runner，也不部署付费云服务。
+
+## 后续界面检查
+
+当前截图使用原有 fixture，明确标注 Preview data。目标手机的普通字号首页/统计/节点与最大辅助字号首页/统计已捕获复核。继续补测中文、长节点名、无配置/无节点、订阅更新失败、全部 VPN 过渡状态，以及手动 VoiceOver、增强对比度、Reduce Motion。已另捕获 iPad Pro 13-inch (M4) 默认字号首页；iPad 全流程、横屏及 macOS/tvOS 仍需独立验证，不能从已有截图推断通过。
 
 ## macOS 本地复现
 

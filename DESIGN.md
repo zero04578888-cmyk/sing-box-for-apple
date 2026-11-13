@@ -60,7 +60,7 @@ The palette moves from nearly black navy surfaces to clear blue and violet signa
 ### Neutral
 - **Night Ground** (#060B16): The iOS screen background.
 - **Deep Surface** (#0E1525): Dashboard cards.
-- **Raised Navy** (#161E32): The selected node's inset surface and the connection control's inner disc.
+- **Raised Navy** (#161E32): Unselected node surfaces, the profile selector, and the connection control's inner disc. Selected nodes instead use Nebula Blue at 12% fill opacity.
 - Surface outlines use white at 14% opacity in standard contrast and strengthen to 45% in increased contrast. Use the semantic `.primary`, `.secondary`, and `.foreground` colors for text.
 
 **The Signal Color Rule.** Apply an accent to a real action, selection, or data direction; do not use the gradient as a text fill or as a substitute for state.
@@ -86,7 +86,7 @@ The palette moves from nearly black navy surfaces to clear blue and violet signa
 
 Keep the dashboard's native navigation bar and five bottom tabs. The dashboard vertically presents the connection surface before the existing configurable card grid; preserve profile management, card configuration, and their native sheets. The Statistics page uses a centered content column capped at 760 points with 20 points of outer padding; it presents rate charts before service-health cards. Node groups remain a vertically scrolling list of expanded and collapsed groups, with selectable outbound items arranged in an adaptive grid.
 
-Use the observed 8-point close spacing, 16-point regular spacing, and 24-point section spacing where implemented. At iOS accessibility text sizes, paired dashboard and statistics cards become a single column, and adaptive node grids become one column. Keep controls inside native safe areas. Size primary actions and profile/group controls to at least 44 points where specified.
+Use the observed 8-point close spacing, 16-point regular spacing, and 24-point section spacing where implemented. At iOS accessibility text sizes, paired dashboard and statistics cards become a single column, adaptive node grids become one column, the connection brand and shortcut links stack, and compact accessory text gives way to the growing native connection control. The bottom accessory height scales with the body text size; its state text and duration are hidden when the node actions and profile context take priority. Keep controls inside native safe areas. Size primary actions and profile/group controls to at least 44 points where specified.
 
 At accessibility text sizes, use one column; keep every control visible and let the native scroll view carry longer content.
 
@@ -114,7 +114,7 @@ Use continuous 16-point corners on common surfaces and 12-point corners on selec
 - **Internal Padding:** 16 points for the shared dashboard card; 20 points around the statistics content.
 
 ### Navigation
-- Use the platform `TabView` and `NavigationStack` behavior, with the existing Dashboard, Logs, Tools, and Settings destinations plus Statistics on iOS. Retain edge-swipe back and standard sheet interactions.
+- Use the platform `TabView` and `NavigationStack` behavior, with the existing Dashboard, Logs, Tools, and Settings destinations plus Statistics on iOS. Retain edge-swipe back and standard sheet interactions. Group and connection counts remain available through the action's accessibility value when larger text hides the compact visual count.
 
 ### Selected outbound item
 - An item keeps its existing native button and group-selection action. The selected state uses a blue outline, Nebula Blue at 12% fill opacity, and VoiceOver's selected trait/value; unselected items use Raised Navy. The token schema cannot express an accent color at a specific opacity, so no selected-fill component token is defined. Keep URL testing in its existing context menu.
@@ -124,6 +124,7 @@ Use continuous 16-point corners on common surfaces and 12-point corners on selec
 
 ### Status
 - Treat each `NEVPNStatus` separately: show Connected only for `.connected`; show connecting, reconnecting, and disconnecting as their own transient states. A connected label is interface status evidence, not real-device VPN validation.
+- On the local device, Statistics observes the selected `ExtensionProfile` status so a disconnect immediately hides stale traffic. Remote service status continues to follow `CommandClient`.
 
 ## Do's and Don'ts
 

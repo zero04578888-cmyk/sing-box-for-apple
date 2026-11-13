@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T00:03:11+09:00",
+  "title": "Design System: NEBULA",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Nebula Blue",
+        "canonical": "#7DB3FF"
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Nebula Violet",
+        "canonical": "#B8A1FF"
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Night Ground",
+        "canonical": "#060B16"
+      },
+      "neutral-surface": {
+        "role": "neutral",
+        "displayName": "Deep Surface",
+        "canonical": "#0E1525"
+      },
+      "neutral-raised": {
+        "role": "neutral",
+        "displayName": "Raised Navy",
+        "canonical": "#161E32"
+      }
+    },
+    "typographyMeta": {
+      "system": {
+        "displayName": "SF Pro",
+        "purpose": "Native iOS text; honor semantic styles and Dynamic Type."
+      },
+      "measurement": {
+        "displayName": "Monospaced digits",
+        "purpose": "Keep telemetry numerals aligned while values update."
+      }
+    },
+    "motion": [
+      {
+        "name": "connection-state",
+        "value": "ease-out 0.2s",
+        "purpose": "Restrained state change, disabled when Reduce Motion is enabled."
+      },
+      {
+        "name": "selection",
+        "value": "ease-out 0.12s",
+        "purpose": "Selected-node fill and outline, disabled when Reduce Motion is enabled."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Connection Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. A native-action representation of the circular connection control; the Start and Stop label must follow the actual VPN status.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\" aria-label=\"Start\"><span class=\"ds-power\" aria-hidden=\"true\"><svg viewBox=\"0 0 44 44\" focusable=\"false\"><path d=\"M22 4v17M10 10a18 18 0 1 0 24 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"/></svg></span><span>Start</span></button>",
+      "css": ".ds-button-primary { color: #F4F5F8; display: inline-flex; flex-direction: column; align-items: center; gap: 12pt; padding: 8pt; border: 0; border-radius: 16pt; background: transparent; font: 600 17pt system-ui, sans-serif; cursor: pointer; } .ds-button-primary:focus-visible { outline: 3pt solid #B8A1FF; outline-offset: 4pt; } .ds-button-primary:active { opacity: 0.82; } .ds-power { display: grid; place-items: center; box-sizing: border-box; width: 144pt; height: 144pt; border: 2pt solid transparent; border-radius: 50%; background: linear-gradient(#161E32,#161E32) padding-box, linear-gradient(135deg,#7DB3FF,#B8A1FF) border-box; color: #7DB3FF; } .ds-power svg { width: 40pt; height: 40pt; }"
+    },
+    {
+      "name": "Nebula Surface",
+      "kind": "card",
+      "refersTo": "surface",
+      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. A raised dark service card with a fine semantic outline and no shadow.",
+      "html": "<article class=\"ds-surface\"><h2>Service health</h2><p>Current service information</p></article>",
+      "css": ".ds-surface { box-sizing: border-box; width: 100%; padding: 16pt; border: 1pt solid rgba(255,255,255,.14); border-radius: 16pt; background: #0E1525; color: #F4F5F8; font: 400 17pt system-ui, sans-serif; } .ds-surface h2 { margin: 0 0 8pt; font-size: 17pt; font-weight: 600; } .ds-surface p { margin: 0; color: #C1C8D6; } .ds-surface:focus-within { border-color: #7DB3FF; } @media (prefers-contrast: more) { .ds-surface { border-color: rgba(255,255,255,.45); } }"
+    },
+    {
+      "name": "Selected Outbound",
+      "kind": "chip",
+      "description": "Illustrative swatch only. The actual selected node background is Nebula Blue at 12% opacity and cannot be represented faithfully by the component token schema; see DESIGN.md.",
+      "html": "<button class=\"ds-node\" type=\"button\" aria-pressed=\"true\"><span>Outbound</span><span class=\"ds-node-selected\">Selected</span></button>",
+      "css": ".ds-node { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 8pt; width: 100%; min-height: 44pt; padding: 10pt 12pt; border: 1pt solid rgba(255,255,255,.14); border-radius: 12pt; background: #161E32; color: #F4F5F8; text-align: left; font: 600 15pt system-ui, sans-serif; cursor: pointer; } .ds-node[aria-pressed=true] { border-color: #7DB3FF; background: rgba(125,179,255,.12); } .ds-node:focus-visible { outline: 3pt solid #B8A1FF; outline-offset: 2pt; } .ds-node-selected { color: #7DB3FF; font: 400 13pt system-ui, sans-serif; }"
+    },
+    {
+      "name": "Native Tab Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. Shows the native tab names and selected treatment.",
+      "html": "<nav class=\"ds-navigation\" aria-label=\"Main navigation\"><button type=\"button\" aria-current=\"page\">Dashboard</button><button type=\"button\">Statistics</button><button type=\"button\">Logs</button><button type=\"button\">Tools</button><button type=\"button\">Settings</button></nav>",
+      "css": ".ds-navigation { display: flex; align-items: center; justify-content: space-around; gap: 8pt; padding: 8pt; background: #0E1525; color: #C1C8D6; font: 500 13pt system-ui, sans-serif; } .ds-navigation button { min-width: 44pt; min-height: 44pt; padding: 8pt; border: 0; border-radius: 12pt; background: transparent; color: inherit; font: inherit; } .ds-navigation button[aria-current=page] { color: #7DB3FF; } .ds-navigation button:focus-visible { outline: 2pt solid #B8A1FF; }"
+    },
+    {
+      "name": "Profile Selector",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Illustrative HTML swatch only; native SwiftUI remains the implementation. Not a simulator screenshot or proof of device rendering. An existing 44-point native control that opens the configured profiles picker; the raised surface is an implementation detail.",
+      "html": "<button class=\"ds-profile-selector\" type=\"button\" aria-label=\"Select Profile\" aria-haspopup=\"dialog\"><span>Configured profile</span><svg viewBox=\"0 0 20 20\" aria-hidden=\"true\"><path d=\"m5 7 5 5 5-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></button>",
+      "css": ".ds-profile-selector { display:flex; align-items:center; justify-content:space-between; gap:12pt; box-sizing:border-box; width:100%; min-height:44pt; padding:8pt 14pt; border:0; border-radius:12pt; background:#161E32; color:#F4F5F8; text-align:left; font:500 17pt system-ui,sans-serif; cursor:pointer; } .ds-profile-selector:focus-visible { outline:3pt solid #7DB3FF; outline-offset:2pt; } .ds-profile-selector svg { width:16pt; height:16pt; flex:0 0 auto; color:#B8C1D2; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "One Clear Connection.",
+    "overview": "NEBULA carries the user's specified navy-black, blue-violet world into the native iOS client. Its signature is the quiet gradient around the primary power control; node selection and directional traffic use the same restrained blue and violet accents. The existing iOS navigation, SF Symbols, SwiftUI controls, and system type remain the foundation.\n\nThe dashboard places the existing connection action first and leaves profile controls and configurable service cards in their existing roles. A separate Statistics tab presents current service telemetry. Node groups keep their existing selection, testing, and expansion actions. Color and motion describe UI state; neither is evidence that the VPN tunnel is healthy.",
+    "keyCharacteristics": [
+      "Dark navy background and layered, solid surfaces.",
+      "Blue and violet accents reserved for the primary action, selected nodes, and directional traffic.",
+      "Native iOS type, navigation, and VoiceOver actions.",
+      "Live counters shown as reported by the current service."
+    ],
+    "rules": [
+      {
+        "name": "The Signal Color Rule",
+        "body": "Apply an accent to a real action, selection, or data direction; do not use the gradient as a text fill or as a substitute for state.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Type Rule",
+        "body": "Use semantic iOS text styles and monospaced digits only where a value changes; allow users' Dynamic Type settings to change the layout.",
+        "section": "typography"
+      },
+      {
+        "name": "The Surface Separation Rule",
+        "body": "Separate cards with a difference in fill and a subtle outline, not a shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do reuse the existing ExtensionProfile start/stop operation and its error handling.",
+      "Do retain native tabs, navigation gestures, system fonts, SF Symbols, and sheet behavior.",
+      "Do honor increased-contrast outlines, Reduce Motion, Dynamic Type, safe areas, and VoiceOver selection.",
+      "Do expose totals and short-lived rates as reported by the current local or remote service."
+    ],
+    "donts": [
+      "Don't infer a connected tunnel from the start button press or an in-progress NEVPNStatus.",
+      "Don't label service totals as daily, monthly, or historical accounting.",
+      "Don't display retained rate samples as current data after disconnection.",
+      "Don't make macOS or tvOS inherit the iOS-only NEBULA system automatically."
+    ]
+  }
+}

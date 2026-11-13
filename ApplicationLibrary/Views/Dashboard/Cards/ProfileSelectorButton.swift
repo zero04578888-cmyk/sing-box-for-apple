@@ -11,17 +11,28 @@ struct ProfileSelectorButton: View {
         } label: {
             HStack {
                 Text(selectedItem?.name ?? "Select Profile")
+                    #if os(iOS)
+                    .font(.body.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                    #else
                     .font(.system(size: buttonFontSize, weight: .medium))
+                    #endif
                     .foregroundStyle(.primary)
 
                 Spacer()
 
                 Image(systemName: "chevron.up.chevron.down")
+                    #if os(iOS)
+                    .font(.caption.weight(.semibold))
+                    #else
                     .font(.system(size: chevronSize, weight: .semibold))
+                    #endif
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 14)
-            .frame(height: buttonHeight)
+            .padding(.vertical, 8)
+            .frame(minHeight: buttonHeight)
             .contentShape(Rectangle())
         }
         #if os(tvOS)
@@ -80,6 +91,9 @@ struct ProfileSelectorButton: View {
 extension View {
     @ViewBuilder
     func selectorBackground() -> some View {
+        #if os(iOS)
+        background(NebulaTheme.raisedSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        #else
         if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *) {
             glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
         } else {
@@ -88,5 +102,6 @@ extension View {
                     .fill(Color.secondary.opacity(0.1))
             )
         }
+        #endif
     }
 }

@@ -1,0 +1,7 @@
+{
+  "repository": "SagerNet/sing-box",
+  "revision": "824dbcfb4dd0a95921840b1737b950cde590241e",
+  "upstreamTag": "v1.15.0-alpha.13",
+  "goVersion": "1.26.10",
+  "provenance": "Official tag matching the Apple client's marketing version; API compatibility must be established by the unsigned SFI build. No core source edits."
+}

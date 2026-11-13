@@ -15,6 +15,9 @@ public enum NavigationPage: Int, CaseIterable, Identifiable {
     case logs
     case tools
     case settings
+    #if os(iOS)
+        case statistics
+    #endif
 }
 
 public extension NavigationPage {
@@ -22,6 +25,10 @@ public extension NavigationPage {
         switch snapshotValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "dashboard":
             self = .dashboard
+        #if os(iOS)
+            case "statistics":
+                self = .statistics
+        #endif
         case "logs":
             self = .logs
         case "tools":
@@ -41,13 +48,17 @@ public extension NavigationPage {
 
     #if !os(tvOS)
         static var sidebarDefaultPages: [NavigationPage] {
-            [.logs, .tools, .settings]
+            #if os(iOS)
+                [.statistics, .logs, .tools, .settings]
+            #else
+                [.logs, .tools, .settings]
+            #endif
         }
     #endif
 
     #if os(iOS)
         static var tabPages: [NavigationPage] {
-            [.dashboard, .logs, .tools, .settings]
+            [.dashboard, .statistics, .logs, .tools, .settings]
         }
     #endif
 
@@ -60,6 +71,10 @@ public extension NavigationPage {
         switch self {
         case .dashboard:
             return String(localized: "Dashboard")
+        #if os(iOS)
+            case .statistics:
+                return String(localized: "Statistics")
+        #endif
         #if !os(tvOS)
             case .groups:
                 return String(localized: "Groups")
@@ -79,6 +94,10 @@ public extension NavigationPage {
         switch self {
         case .dashboard:
             return "text.and.command.macwindow"
+        #if os(iOS)
+            case .statistics:
+                return "chart.xyaxis.line"
+        #endif
         #if !os(tvOS)
             case .groups:
                 return "rectangle.3.group.fill"
@@ -100,6 +119,10 @@ public extension NavigationPage {
             switch self {
             case .dashboard:
                 DashboardView()
+            #if os(iOS)
+                case .statistics:
+                    NebulaStatisticsView()
+            #endif
             #if !os(tvOS)
                 case .groups:
                     GroupListView()
@@ -116,7 +139,7 @@ public extension NavigationPage {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         #if os(iOS)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(NebulaTheme.background)
         #endif
     }
 

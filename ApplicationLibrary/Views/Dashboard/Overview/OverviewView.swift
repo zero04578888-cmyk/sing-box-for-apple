@@ -7,6 +7,7 @@ import SwiftUI
 public struct OverviewView: View {
     @EnvironmentObject private var environments: ExtensionEnvironments
     @EnvironmentObject private var profile: ExtensionProfile
+    @Environment(\.sizeCategory) private var sizeCategory
     @StateObject private var coordinator = OverviewViewModel()
     @ObservedObject private var configuration: DashboardCardConfiguration
 
@@ -35,13 +36,19 @@ public struct OverviewView: View {
                 ProgressView()
             } else {
                 ScrollView {
-                    cardGrid
-                        .padding()
+                    VStack(spacing: 0) {
+                        #if os(iOS)
+                            NebulaConnectionHero()
+                                .padding([.horizontal, .top])
+                        #endif
+                        cardGrid
+                            .padding()
+                            .disabled(!Variant.screenshotMode && (!profile.status.isSwitchable || coordinator.reasserting))
+                    }
                 }
             }
         }
         .alert($coordinator.alert)
-        .disabled(!Variant.screenshotMode && (!profile.status.isSwitchable || coordinator.reasserting))
     }
 
     @ViewBuilder
@@ -51,7 +58,7 @@ public struct OverviewView: View {
 
         VStack(spacing: 16) {
             ForEach(Array(groupedCards.enumerated()), id: \.offset) { _, group in
-                if group.count == 2 {
+                if group.count == 2, !sizeCategory.isAccessibilityCategory {
                     HStack(spacing: 16) {
                         cardView(for: group[0])
                             .frame(maxWidth: .infinity)
@@ -59,7 +66,9 @@ public struct OverviewView: View {
                             .frame(maxWidth: .infinity)
                     }
                 } else {
-                    cardView(for: group[0])
+                    ForEach(group) { card in
+                        cardView(for: card)
+                    }
                 }
             }
         }

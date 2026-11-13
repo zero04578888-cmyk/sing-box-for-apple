@@ -192,6 +192,9 @@ private struct CardStyleModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
+        #if os(iOS)
+        content.modifier(NebulaSurface())
+        #else
         if #available(iOS 26.0, macOS 26.0, tvOS 26.0, *) {
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: 16))
@@ -200,6 +203,7 @@ private struct CardStyleModifier: ViewModifier {
                 .background(backgroundColor)
                 .cornerRadius(16)
         }
+        #endif
     }
 
     private var backgroundColor: Color {

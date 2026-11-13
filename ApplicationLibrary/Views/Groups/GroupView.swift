@@ -31,71 +31,95 @@ public struct GroupHeaderView: View {
         listViewModel.testingGroups.contains(group.tag)
     }
 
+    @Environment(\.sizeCategory) private var sizeCategory
+
     public var body: some View {
-        HStack(spacing: 8) {
-            Text(group.tag)
-                .font(.headline)
-            Text(group.displayType)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 8)
-            Text(verbatim: "\(group.items.count)")
-                .font(.caption.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
-                .background(Color.urlTestNeutral)
-                .clipShape(Capsule())
-            HStack(spacing: 12) {
-                Button {
-                    listViewModel.performGroupURLTest(group.tag)
-                } label: {
-                    Group {
-                        if isTesting {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "bolt.fill")
-                        }
+        Group {
+            if sizeCategory.isAccessibilityCategory {
+                VStack(alignment: .leading, spacing: 12) {
+                    title
+                    HStack {
+                        count
+                        Spacer()
+                        controls
                     }
-                    .frame(minWidth: 28, minHeight: 28)
-                    .contentShape(Rectangle())
                 }
-                .disabled(isTesting)
-                #if os(macOS) || os(tvOS)
-                    .buttonStyle(.plain)
-                #else
-                    .buttonStyle(.borderless)
-                #endif
-                Button {
-                    listViewModel.toggleExpand(groupTag: group.tag)
-                } label: {
-                    Image(systemName: group.isExpand ? "chevron.up" : "chevron.down")
-                        .frame(minWidth: 28, minHeight: 28)
-                        .contentShape(Rectangle())
+            } else {
+                HStack(spacing: 8) {
+                    title
+                    Spacer(minLength: 8)
+                    count
+                    controls
                 }
-                #if os(macOS) || os(tvOS)
-                .buttonStyle(.plain)
-                #else
-                .buttonStyle(.borderless)
-                #endif
             }
-            .padding(.leading, 12)
         }
         .padding(EdgeInsets(top: 12, leading: 16, bottom: 10, trailing: 8))
         .frame(maxWidth: .infinity, alignment: .leading)
-        #if !os(tvOS)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                listViewModel.toggleExpand(groupTag: group.tag)
+        .cardSegment(top: true, bottom: false)
+    }
+
+    private var title: some View {
+        Button {
+            listViewModel.toggleExpand(groupTag: group.tag)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(group.tag).font(.headline).foregroundStyle(.primary)
+                Text(group.displayType).font(.caption).foregroundStyle(.secondary)
             }
+            .frame(minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(group.isExpand ? Text("Collapse") : Text("Expand"))
+    }
+
+    private var count: some View {
+        Text(verbatim: "\(group.items.count)")
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
+            .background(Color.urlTestNeutral)
+            .clipShape(Capsule())
+    }
+
+    private var controls: some View {
+        HStack(spacing: 8) {
+            Button {
+                listViewModel.performGroupURLTest(group.tag)
+            } label: {
+                Group {
+                    if isTesting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "bolt.fill")
+                    }
+                }
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .disabled(isTesting)
+            .accessibilityLabel("URLTest")
+            Button {
+                listViewModel.toggleExpand(groupTag: group.tag)
+            } label: {
+                Image(systemName: group.isExpand ? "chevron.up" : "chevron.down")
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(group.isExpand ? Text("Collapse") : Text("Expand"))
+        }
+        #if os(macOS) || os(tvOS)
+        .buttonStyle(.plain)
+        #else
+        .buttonStyle(.borderless)
         #endif
-            .cardSegment(top: true, bottom: false)
     }
 }
 
 @MainActor
 public struct GroupContentView: View {
     @EnvironmentObject private var listViewModel: GroupListViewModel
+    @Environment(\.sizeCategory) private var sizeCategory
 
     private let group: OutboundGroup
 
@@ -108,7 +132,7 @@ public struct GroupContentView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if group.isExpand {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: GroupsLayout.itemMinWidth), spacing: 10)], spacing: 10) {
+                LazyVGrid(columns: sizeCategory.isAccessibilityCategory ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: GroupsLayout.itemMinWidth), spacing: 10)], spacing: 10) {
                     ForEach(group.items, id: \.tag) { item in
                         GroupItemView(
                             groupTag: group.tag,
@@ -240,7 +264,7 @@ private struct CardSegmentModifier: ViewModifier {
 
     private var backgroundColor: Color {
         #if os(iOS)
-            return Color(uiColor: .secondarySystemGroupedBackground)
+            return NebulaTheme.surface
         #elseif os(macOS)
             return Color(nsColor: .textBackgroundColor)
         #elseif os(tvOS)

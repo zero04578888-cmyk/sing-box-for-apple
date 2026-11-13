@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 public struct RemoteDashboardView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.sizeCategory) private var sizeCategory
     @EnvironmentObject private var environments: ExtensionEnvironments
     private let commandClient: CommandClient
     @ObservedObject private var cardConfiguration: DashboardCardConfiguration
@@ -146,7 +147,7 @@ public struct RemoteDashboardView: View {
 
         VStack(spacing: 16) {
             ForEach(Array(groupedCards.enumerated()), id: \.offset) { _, group in
-                if group.count == 2 {
+                if group.count == 2, !sizeCategory.isAccessibilityCategory {
                     HStack(spacing: 16) {
                         cardView(for: group[0])
                             .frame(maxWidth: .infinity)
@@ -154,7 +155,9 @@ public struct RemoteDashboardView: View {
                             .frame(maxWidth: .infinity)
                     }
                 } else {
-                    cardView(for: group[0])
+                    ForEach(group) { card in
+                        cardView(for: card)
+                    }
                 }
             }
         }

@@ -12,6 +12,7 @@ import SwiftUI
 @MainActor
 public struct ProfileCard: View {
     @EnvironmentObject private var environments: ExtensionEnvironments
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var viewModel = ViewModel()
 
     @Binding private var profileList: [ProfilePreview]
@@ -153,10 +154,11 @@ public struct ProfileCard: View {
                 viewModel.showNewProfile = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 16))
-                    .frame(width: 44, height: 32)
+                    .font(.body)
+                    .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
+            .accessibilityLabel("New Profile")
             #if !os(tvOS)
             .buttonStyle(.plain)
             #endif
@@ -211,10 +213,11 @@ public struct ProfileCard: View {
             viewModel.profileToEdit = profile.origin
         } label: {
             Image(systemName: "pencil")
-                .font(.system(size: 16))
-                .frame(width: 44, height: 32)
+                .font(.body)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
+        .accessibilityLabel("Edit Profile")
         #if !os(tvOS)
         .buttonStyle(.plain)
         #endif
@@ -229,17 +232,18 @@ public struct ProfileCard: View {
             }
         } label: {
             Image(systemName: "arrow.clockwise")
-                .font(.system(size: 16))
-                .rotationEffect(.degrees(viewModel.isUpdating ? 360 : 0))
+                .font(.body)
+                .rotationEffect(.degrees(viewModel.isUpdating && !reduceMotion ? 360 : 0))
                 .animation(
-                    viewModel.isUpdating
+                    viewModel.isUpdating && !reduceMotion
                         ? .linear(duration: 1).repeatForever(autoreverses: false)
                         : .default,
                     value: viewModel.isUpdating
                 )
-                .frame(width: 44, height: 32)
+                .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Rectangle())
         }
+        .accessibilityLabel("Update")
         #if !os(tvOS)
         .buttonStyle(.plain)
         #endif
@@ -310,8 +314,8 @@ public struct ProfileCard: View {
                 }
             } label: {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 16))
-                    .frame(width: 44, height: 32)
+                    .font(.body)
+                    .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
             .menuIndicator(.hidden)

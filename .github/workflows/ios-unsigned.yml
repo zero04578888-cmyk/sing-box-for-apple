@@ -1,0 +1,179 @@
+name: NEBULA unsigned iOS
+
+on:
+  push:
+    branches: [feat/nebula-ui]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_ui_tests:
+        description: Build Simulator slices and run fixture UI tests on iPhone 16 Pro Max (no VPN validation)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nebula-ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 ci/preflight.py --source-only
+      - run: python3 -m unittest discover -s ci -p 'test_*.py' -v
+
+  unsigned-ios:
+    needs: source-checks
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      DISABLE_SWIFTLINT: '1'
+      RUN_UI_TESTS: ${{ inputs.run_ui_tests || false }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Select installed Xcode 26.2 or newer
+        run: |
+          set -euo pipefail
+          mkdir -p build-logs
+          python3 ci/select_xcode.py
+          xcodebuild -version | tee build-logs/xcode.txt
+          xcodebuild -showsdks | tee build-logs/sdks.txt
+          python3 ci/preflight.py --source-only --check-xcode
+
+      - name: Read pinned dependency
+        id: dependency
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          dep = json.loads(Path('ci/libbox.json').read_text())
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True).splitlines()[-1].replace(' ', '-')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key in ['repository', 'revision', 'goVersion']:
+                  print(f'{key}={dep[key]}', file=output)
+              print(f'xcode={xcode}', file=output)
+              print('platforms=' + ('ios,iossimulator' if os.environ['RUN_UI_TESTS'] == 'true' else 'ios/arm64'), file=output)
+          PY
+
+      - name: Cache pinned Libbox build
+        id: libbox-cache
+        uses: actions/cache@v4
+        with:
+          path: Libbox.xcframework
+          key: libbox-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ steps.dependency.outputs.revision }}-${{ steps.dependency.outputs.goVersion }}-${{ env.RUN_UI_TESTS }}-${{ hashFiles('ci/libbox.json', '.github/workflows/ios-unsigned.yml') }}
+
+      - name: Checkout unmodified official Libbox source
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.dependency.outputs.repository }}
+          ref: ${{ steps.dependency.outputs.revision }}
+          path: .ci/core
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up upstream Go toolchain
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.dependency.outputs.goVersion }}
+          cache-dependency-path: .ci/core/go.sum
+
+      - name: Build official Libbox without source edits
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        working-directory: .ci/core
+        env:
+          EXPECTED_REVISION: ${{ steps.dependency.outputs.revision }}
+          LIBBOX_PLATFORMS: ${{ steps.dependency.outputs.platforms }}
+          GOTOOLCHAIN: local
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+          make lib_install 2>&1 | tee ../../build-logs/libbox-tools.log
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          go run ./cmd/internal/build_libbox -target apple -platform "$LIBBOX_PLATFORMS" 2>&1 | tee ../../build-logs/libbox-build.log
+          git diff --exit-code HEAD
+          cp -R Libbox.xcframework ../../Libbox.xcframework
+
+      - name: Verify required Framework slices
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$RUN_UI_TESTS" == true ]]; then args+=(--require-simulator); fi
+          python3 ci/preflight.py --check-xcode "${args[@]}" | tee build-logs/preflight.txt
+          cp ci/libbox.json build-logs/libbox-provenance.json
+          xcodebuild -list -project sing-box.xcodeproj -skipPackagePluginValidation 2>&1 | tee build-logs/schemes.log
+
+      - name: Resolve locked Swift packages
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies -project sing-box.xcodeproj -scheme SFI \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
+            2>&1 | tee build-logs/packages.log
+          git diff --exit-code -- sing-box.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+      - name: Compile app and embedded extensions without signing
+        run: |
+          set -euo pipefail
+          xcodebuild build -project sing-box.xcodeproj -scheme SFI -configuration Debug \
+            -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData \
+            -resultBundlePath build/Unsigned-iOS.xcresult \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -disableAutomaticPackageResolution -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
+            2>&1 | tee build-logs/unsigned-ios.log
+
+      - name: Run fixture UI checks and capture Simulator evidence
+        if: env.RUN_UI_TESTS == 'true'
+        run: |
+          set -euo pipefail
+          python3 ci/select_simulator.py
+          xcodebuild test -project sing-box.xcodeproj -scheme SFI -configuration Debug \
+            -destination "platform=iOS Simulator,id=$NEBULA_SIMULATOR_UDID" \
+            -derivedDataPath build/SimulatorData -resultBundlePath build/Nebula-UI.xcresult \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -disableAutomaticPackageResolution -skipPackagePluginValidation \
+            -only-testing:SFIUITests/NebulaUITests \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
+            2>&1 | tee build-logs/ui-tests.log
+
+      - name: Record validation scope
+        if: always()
+        run: |
+          {
+            echo '## NEBULA validation scope'
+            echo 'See job/step status and attached logs for the actual result.'
+            echo 'Unsigned compilation and fixture UI tests do not validate a signed installation or real VPN traffic.'
+            echo 'No IPA export, credentials, signing certificates, or real subscriptions are used.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diagnostic evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nebula-validation-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 7
+          path: |
+            build-logs/
+            build/Unsigned-iOS.xcresult
+            build/Nebula-UI.xcresult

@@ -16,13 +16,15 @@ public struct DownloadTrafficCard: View {
                     Text(verbatim: "249 MB/s")
                         .font(.title2)
                         .fontWeight(.medium)
+                    Text("Service total").font(.caption).foregroundStyle(.secondary)
                     Text(verbatim: "5.6 GB")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                } else if let message = commandClient.status, message.trafficAvailable {
+                } else if commandClient.isConnected, let message = commandClient.status, message.trafficAvailable {
                     Text(verbatim: "\(LibboxFormatBytes(message.downlink))/s")
                         .font(.title2)
                         .fontWeight(.medium)
+                    Text("Service total").font(.caption).foregroundStyle(.secondary)
                     Text(LibboxFormatBytes(message.downlinkTotal))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -35,11 +37,23 @@ public struct DownloadTrafficCard: View {
                         .foregroundStyle(.secondary)
                 }
 
-                TrafficLineChart(
-                    data: commandClient.downlinkHistory,
-                    lineColor: .primary
-                )
+                if Variant.screenshotMode || (commandClient.isConnected && commandClient.status?.trafficAvailable == true) {
+                    TrafficLineChart(data: commandClient.downlinkHistory, lineColor: trafficColor)
+                } else {
+                    Text("Waiting for live data")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .frame(minHeight: 60)
+                }
             }
+            .monospacedDigit()
         }
+    }
+
+    private var trafficColor: Color {
+        #if os(iOS)
+            NebulaTheme.blue
+        #else
+            .primary
+        #endif
     }
 }

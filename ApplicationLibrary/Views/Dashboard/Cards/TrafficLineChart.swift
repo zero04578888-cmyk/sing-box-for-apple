@@ -40,6 +40,8 @@ public struct TrafficLineChart: View {
             drawLine(context: context, points: points, height: height)
         }
         .frame(height: chartHeight)
+        // The adjacent rate/total labels carry the accessible measurements.
+        .accessibilityHidden(true)
     }
 
     private func drawGrid(context: GraphicsContext, width: CGFloat, height: CGFloat) {

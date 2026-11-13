@@ -14,3 +14,18 @@ AGENTS.md
 /fastlane/test_output/
 /fastlane/.bundle/
 /fastlane/.cache/
+
+# Local signing material and credentials must never enter source control.
+*.p12
+*.pfx
+*.p8
+*.key
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
+!.env.example
+/build-logs/
+/.ci/
+__pycache__/
+*.py[cod]

@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 public struct GroupItemView: View {
     @EnvironmentObject private var listViewModel: GroupListViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let groupTag: String
     private let selectable: Bool
@@ -30,12 +31,11 @@ public struct GroupItemView: View {
                         .foregroundStyle(.foreground)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                    #if os(tvOS)
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(Color.accentColor)
-                        }
-                    #endif
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(selectionColor)
+                            .accessibilityHidden(true)
+                    }
                 }
                 HStack {
                     Text(item.displayType)
@@ -54,18 +54,21 @@ public struct GroupItemView: View {
                 .padding(EdgeInsets(top: 10, leading: 12, bottom: 10, trailing: 12))
                 .contentShape(Rectangle())
             #endif
+            .accessibilityElement(children: .combine)
         }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityValue(isSelected ? Text("Selected") : Text(""))
         #if !os(tvOS)
         .buttonStyle(.borderless)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? AnyShapeStyle(Color.accentColor.opacity(0.12)) : AnyShapeStyle(itemBackground))
+                .fill(isSelected ? AnyShapeStyle(selectionColor.opacity(0.12)) : AnyShapeStyle(itemBackground))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSelected ? Color.accentColor : Color.urlTestNeutral, lineWidth: 1)
+                .strokeBorder(isSelected ? selectionColor : itemBorder, lineWidth: 1)
         )
-        .animation(.easeOut(duration: 0.12), value: isSelected)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isSelected)
         .contextMenu {
             Button {
                 listViewModel.performURLTest(item.tag)
@@ -78,11 +81,27 @@ public struct GroupItemView: View {
 
     private var itemBackground: Color {
         #if os(iOS)
-            return Color(uiColor: .systemGroupedBackground)
+            return NebulaTheme.raisedSurface
         #elseif os(macOS)
             return Color(nsColor: .windowBackgroundColor)
         #else
             return Color.clear
+        #endif
+    }
+
+    private var selectionColor: Color {
+        #if os(iOS)
+            NebulaTheme.blue
+        #else
+            .accentColor
+        #endif
+    }
+
+    private var itemBorder: Color {
+        #if os(iOS)
+            NebulaTheme.border
+        #else
+            .urlTestNeutral
         #endif
     }
 }

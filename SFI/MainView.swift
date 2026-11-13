@@ -172,11 +172,10 @@ struct MainView: View {
     }
 
     var body: some View {
-        if Variant.screenshotMode {
-            mainBody.preferredColorScheme(.dark)
-        } else {
-            mainBody
-        }
+        mainBody
+            .preferredColorScheme(.dark)
+            .tint(NebulaTheme.blue)
+            .background(NebulaTheme.background)
     }
 
     @ViewBuilder
@@ -221,6 +220,9 @@ struct MainView: View {
     private var accessoryInset: some View {
         if environments.remoteServer != nil {
             remoteStatusBarPill
+        } else if selection == .dashboard {
+            // The dashboard owns the primary connection control; other tabs keep their accessory.
+            EmptyView()
         } else if let profile = environments.extensionProfile, !environments.extensionProfileLoading, !environments.emptyProfiles {
             AccessoryInset(profile: profile) {
                 statusBarPill

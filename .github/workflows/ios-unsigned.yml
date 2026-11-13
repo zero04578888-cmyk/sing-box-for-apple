@@ -193,7 +193,8 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          app=build/SimulatorData/Build/Products/Debug-iphonesimulator/SFI.app
+          app=build/SimulatorData/Build/Products/Debug-iphonesimulator/sing-box.app
+          test -f "$app/Info.plist"
           bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
           mkdir -p build/TabletScreenshots
           xcrun simctl install "$NEBULA_SIMULATOR_UDID" "$app"

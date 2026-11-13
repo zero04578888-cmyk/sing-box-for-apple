@@ -157,11 +157,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
             2>&1 | tee build-logs/unsigned-ios.log
 
+      - name: Prepare iPhone 16 Pro Max Simulator
+        if: env.RUN_UI_TESTS == 'true'
+        run: python3 ci/select_simulator.py
+
       - name: Run fixture UI checks with Simulator ad-hoc signing
         if: env.RUN_UI_TESTS == 'true'
         run: |
           set -euo pipefail
-          python3 ci/select_simulator.py
           xcodebuild test -project sing-box.xcodeproj -scheme SFI -configuration Debug \
             -destination "platform=iOS Simulator,id=$NEBULA_SIMULATOR_UDID" \
             -derivedDataPath build/SimulatorData -resultBundlePath build/Nebula-UI.xcresult \

@@ -6,6 +6,8 @@ This independent `feat/nebula-native-vpn` branch keeps the NEBULA interface and 
 
 Main ID: `com.Ekg.IYmq`; provider ID: `com.Ekg.IYmq.extension`; common user-reported authorized Group: `group.64AF44249V.hE6jb4`. The extension profile is **MISSING**; one main profile does not authorize both components. No private signing or device installation is performed.
 
+[Unsigned Release build 43436217497](https://github.com/zero04578888-cmyk/sing-box-for-apple/actions/runs/43436217497) passed on `5743a84` with 19 source checks; two bundles and three device Mach-O binaries were verified. [Build results/download](docs/nebula/native-vpn/BUILD_RESULTS.md). Signing remains blocked by the missing extension profile.
+
 See [adaptation and feature impact](docs/nebula/native-vpn/README.md), [two-profile requirements/blockers](docs/nebula/native-vpn/SIGNING_BLOCKERS.md), [re-signer/device checklist](docs/nebula/native-vpn/RESIGN_CHECKLIST.md), and the [independent unsigned workflow](.github/workflows/ios-native-vpn-unsigned.yml). Historical full-version signing docs elsewhere do not describe this two-component package.
 
 Experimental iOS/macOS/tvOS client for sing-box, the universal proxy platform.

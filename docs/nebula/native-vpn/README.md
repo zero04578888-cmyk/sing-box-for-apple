@@ -12,7 +12,7 @@
 - Variant 从主 App/扩展各自 Info.plist 的 `NebulaNativeVPNOnly` 标记识别精简版；配置页面不提供新建 iCloud 云端配置，底层云端读写明确报错，已有记录不迁移、不删除。删除辅助扩展后，不再注册 FileProvider domain 或提供失效的“在文件 App 浏览工作目录”入口。
 - NEBULA 设计系统、首页/统计/节点 SwiftUI 组件原样保留。UI 只做可选能力入口与错误说明适配，不重新设计。
 
-本地源码预检、双组件依赖/权限边界和打包负例测试不能代替 Xcode 构建。实际云端受测 SHA、结果、下载地址、架构与组件计数以后续 BUILD_RESULTS.md / Artifact 中的 release-inventory.json 为准；在真实运行完成前不标为通过。
+本地源码预检、双组件依赖/权限边界和打包负例测试不能代替 Xcode 构建。最终运行 [43436217497](https://github.com/zero04578888-cmyk/sing-box-for-apple/actions/runs/43436217497) 已成功，受测代码 `5743a8412714bf96a7cd32b9e2237fd34f4d2d7e`；19 项检查与 Release 归档通过，下载复核确认 2 个组件、3 个设备 Mach-O、78 个 App 普通文件及共同 Group 一致。详见 [构建结果](BUILD_RESULTS.md) 与 Artifact 的 release-inventory.json。签名、安装与真实 VPN 仍未验证。
 
 ## 功能保留与移除
 

@@ -32,21 +32,28 @@ def read_plist(path):
 
 
 def resolve_icloud_dictionary_key(app, base):
-    """Xcode expands plist string values, but leaves this dictionary key literal.
+    """Normalize the known source container key only in the isolated unsigned product.
 
-    Resolve only the known source template in the unsigned build product. Unknown
-    containers still fail inventory validation; no capability is removed or invented.
+    Keep the shared source Info.plist unchanged for ordinary Xcode builds. Xcode
+    expands values but not dictionary keys, so the release variant must explicitly
+    retarget this key. Unknown containers still fail inventory validation.
     """
     path = app / "Info.plist"
     original = path.read_bytes()
     info = plistlib.loads(original)
+    if info.get("BasePackageIdentifier") != base:
+        raise ValueError("Cannot normalize a container for a different runtime identity.")
+    if base == UPSTREAM or base.startswith(UPSTREAM + "."):
+        return None
     containers = info.get("NSUbiquitousContainers", {})
     template = "iCloud.$(BASE_PACKAGE_IDENTIFIER)"
-    if set(containers) != {template}:
+    known_keys = {template, "iCloud." + UPSTREAM}
+    if len(containers) != 1 or next(iter(containers)) not in known_keys:
         return None
-    info["NSUbiquitousContainers"] = {"iCloud." + base: containers[template]}
+    source_key = next(iter(containers))
+    info["NSUbiquitousContainers"] = {"iCloud." + base: containers[source_key]}
     path.write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_BINARY if original.startswith(b"bplist00") else plistlib.FMT_XML))
-    return {"path": "Info.plist", "key": "NSUbiquitousContainers", "from": template, "to": "iCloud." + base,
+    return {"path": "Info.plist", "key": "NSUbiquitousContainers", "from": source_key, "to": "iCloud." + base,
             "beforeSHA256": hashlib.sha256(original).hexdigest(), "afterSHA256": hashlib.sha256(path.read_bytes()).hexdigest()}
 
 

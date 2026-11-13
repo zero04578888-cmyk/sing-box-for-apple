@@ -12,7 +12,7 @@
 
 实际成功的 Release commit、Xcode、产物数量和下载链接以最终构建记录、`build-logs/commit.txt`、`xcode.txt`、`release-inventory.json` 为准；未完成的运行不能记录为通过。
 
-首轮 Release 的 `xcodebuild archive` 已成功，但 Xcode 没有替换 NSUbiquitousContainers 的字典键变量，打包器拒绝不一致的容器。修复在无签名产物打包层：只显式展开已知的 `iCloud.$(BASE_PACKAGE_IDENTIFIER)` 键，保留其所有配置值；未知/错误容器仍被拒绝。该步骤发生在创建 IPA 和 tar 之前，archive/App/IPA 均保留一致的规范化配置；前后 plist SHA-256 记在 inventory。没有删减 iCloud 权限或改动 Swift/核心二进制。
+首轮 Release 的 `xcodebuild archive` 已成功，但 Xcode 没有替换 NSUbiquitousContainers 的字典键变量，打包器拒绝不一致的容器。修复限定在无签名 Release 产物打包层：保留通用源码 Info.plist 原默认配置，打包时仅把已知的原源码容器键（或早期变量模板键）转换成隔离构建的 iCloud 容器，保留其全部配置值；不一致的运行时身份和未知容器仍被拒绝。该步骤发生在创建 IPA 和 tar 之前，archive/App/IPA 均保留一致的规范化配置；前后 plist SHA-256 记在 inventory。没有删减 iCloud 权限，也没有改动 Swift/核心代码；普通 Xcode 构建的源码配置保持原样。
 
 ## 标识与描述文件
 

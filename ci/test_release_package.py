@@ -73,6 +73,18 @@ class ReleasePackageTests(unittest.TestCase):
             self.assertEqual(len(inventory(app, self.base, self.group)), 7)
             self.assertIsNone(resolve_icloud_dictionary_key(app, self.base))
 
+    def test_legacy_source_key_is_retargeted_only_for_isolated_runtime_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = self.make_app(directory)
+            path = app / "Info.plist"
+            info = plistlib.loads(path.read_bytes())
+            info["NSUbiquitousContainers"] = {"iCloud." + UPSTREAM: {"NSUbiquitousContainerName": "sing-box"}}
+            path.write_bytes(plistlib.dumps(info))
+            self.assertEqual(resolve_icloud_dictionary_key(app, self.base)["from"], "iCloud." + UPSTREAM)
+            self.assertEqual(len(inventory(app, self.base, self.group)), 7)
+            with self.assertRaisesRegex(ValueError, "different runtime identity"):
+                resolve_icloud_dictionary_key(app, "io.wrong.identity")
+
     def test_profile_is_never_public_artifact_input(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

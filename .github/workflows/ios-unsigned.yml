@@ -67,7 +67,7 @@ jobs:
           dep = json.loads(Path('ci/libbox.json').read_text())
           xcode = subprocess.check_output(['xcodebuild', '-version'], text=True).splitlines()[-1].replace(' ', '-')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
-              for key in ['repository', 'revision', 'goVersion']:
+              for key in ['repository', 'revision', 'goVersion', 'upstreamTag']:
                   print(f'{key}={dep[key]}', file=output)
               print(f'xcode={xcode}', file=output)
               print('platforms=' + ('ios,iossimulator' if os.environ['RUN_UI_TESTS'] == 'true' else 'ios/arm64'), file=output)
@@ -102,6 +102,7 @@ jobs:
         working-directory: .ci/core
         env:
           EXPECTED_REVISION: ${{ steps.dependency.outputs.revision }}
+          EXPECTED_TAG: ${{ steps.dependency.outputs.upstreamTag }}
           LIBBOX_PLATFORMS: ${{ steps.dependency.outputs.platforms }}
           GOTOOLCHAIN: local
         run: |
@@ -122,6 +123,13 @@ jobs:
           path: Libbox.xcframework
           key: ${{ steps.libbox-cache.outputs.cache-primary-key }}
 
+      - name: Restore locked Swift packages
+        id: swift-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: swift-packages-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ hashFiles('sing-box.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
       - name: Resolve locked Swift packages
         run: |
           set -euo pipefail
@@ -130,6 +138,13 @@ jobs:
             -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation \
             2>&1 | tee build-logs/packages.log
           git diff --exit-code -- sing-box.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+
+      - name: Save locked Swift packages
+        if: steps.swift-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: ${{ steps.swift-cache.outputs.cache-primary-key }}
 
       - name: Compile app and embedded extensions without signing
         run: |

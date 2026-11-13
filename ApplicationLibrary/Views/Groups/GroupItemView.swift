@@ -40,7 +40,7 @@ public struct GroupItemView: View {
                 HStack {
                     Text(item.displayType)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondary)
                     Spacer(minLength: 8)
                     if item.urlTestDelay > 0 {
                         Text(item.delayString)

@@ -142,7 +142,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
             2>&1 | tee build-logs/unsigned-ios.log
 
-      - name: Run fixture UI checks and capture Simulator evidence
+      - name: Run fixture UI checks with Simulator ad-hoc signing
         if: env.RUN_UI_TESTS == 'true'
         run: |
           set -euo pipefail
@@ -153,7 +153,7 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -disableAutomaticPackageResolution -skipPackagePluginValidation \
             -only-testing:SFIUITests/NebulaUITests \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             2>&1 | tee build-logs/ui-tests.log
 
       - name: Record validation scope
@@ -164,6 +164,7 @@ jobs:
             echo 'See job/step status and attached logs for the actual result.'
             echo 'Unsigned compilation and fixture UI tests do not validate a signed installation or real VPN traffic.'
             echo 'No IPA export, credentials, signing certificates, or real subscriptions are used.'
+            echo 'Simulator tests use ad-hoc signing only; no Apple Developer signing identity or provisioning is validated.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Export native UI screenshot attachments

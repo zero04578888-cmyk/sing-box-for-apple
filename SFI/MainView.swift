@@ -105,6 +105,7 @@ struct MainView: View {
         }
     }
 
+    @available(iOS 16.0, *)
     private func sidebarPageContent(for page: NavigationPage, remoteControlInToolbar: Bool) -> some View {
         NavigationStackCompat {
             page.contentView

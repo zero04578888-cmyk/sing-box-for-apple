@@ -12,6 +12,8 @@
 
 实际成功的 Release commit、Xcode、产物数量和下载链接以最终构建记录、`build-logs/commit.txt`、`xcode.txt`、`release-inventory.json` 为准；未完成的运行不能记录为通过。
 
+首轮 Release 的 `xcodebuild archive` 已成功，但 Xcode 没有替换 NSUbiquitousContainers 的字典键变量，打包器拒绝不一致的容器。修复在无签名产物打包层：只显式展开已知的 `iCloud.$(BASE_PACKAGE_IDENTIFIER)` 键，保留其所有配置值；未知/错误容器仍被拒绝。该步骤发生在创建 IPA 和 tar 之前，archive/App/IPA 均保留一致的规范化配置；前后 plist SHA-256 记在 inventory。没有删减 iCloud 权限或改动 Swift/核心二进制。
+
 ## 标识与描述文件
 
 源码默认 base：`io.nekohasekai.sfamt`；默认共享容器：`group.io.nekohasekai.sfamt`。本次云端构建主动覆盖为隔离的**公开占位标识**，没有声称这些标识已在用户开发者账户注册。
@@ -60,7 +62,7 @@
 
 ## 万能签兼容性结论
 
-**条件性可二签；未实测，不能保证该版本万能签支持此完整多扩展包。** 未获得工具版本或本地运行证据。公开页面只说明 IPA 签名能力，没有可核实的完整 7-profile/ExtensionKit/自定义运行时字段支持说明。
+**条件性可二签；未实测，不能保证该版本万能签支持此完整多扩展包。** 未获得工具版本或本地运行证据，也没有可核实的完整 7-profile/ExtensionKit/自定义运行时字段支持证据；不把名称相近的签名工具当成同一产品。
 
 必须具备：保留 PlugIns 与 Extensions 中全部扩展；逐 Bundle ID 指定 profile；递归签名全部动态 Framework/dylib 和扩展、最后签主 App；保留正确 entitlements；支持当前 iOS 所需签名格式/DER；完整处理上述运行时标识。若工具只能选择一份 profile、仅改主 Bundle ID、自动移除扩展或丢掉 NE/App Groups，则**不满足本项目签名要求**。不得靠“忽略权限错误”继续安装。
 

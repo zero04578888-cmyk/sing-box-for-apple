@@ -31,6 +31,25 @@ def read_plist(path):
         return plistlib.load(stream)
 
 
+def resolve_icloud_dictionary_key(app, base):
+    """Xcode expands plist string values, but leaves this dictionary key literal.
+
+    Resolve only the known source template in the unsigned build product. Unknown
+    containers still fail inventory validation; no capability is removed or invented.
+    """
+    path = app / "Info.plist"
+    original = path.read_bytes()
+    info = plistlib.loads(original)
+    containers = info.get("NSUbiquitousContainers", {})
+    template = "iCloud.$(BASE_PACKAGE_IDENTIFIER)"
+    if set(containers) != {template}:
+        return None
+    info["NSUbiquitousContainers"] = {"iCloud." + base: containers[template]}
+    path.write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_BINARY if original.startswith(b"bplist00") else plistlib.FMT_XML))
+    return {"path": "Info.plist", "key": "NSUbiquitousContainers", "from": template, "to": "iCloud." + base,
+            "beforeSHA256": hashlib.sha256(original).hexdigest(), "afterSHA256": hashlib.sha256(path.read_bytes()).hexdigest()}
+
+
 def check_public_tree(root):
     """Reject signing material and symlinks escaping a self-contained artifact."""
     root = root.resolve()
@@ -151,6 +170,7 @@ def main():
     settings = {entry["target"]: entry["buildSettings"] for entry in json.loads(args.build_settings.read_text())}
     base = settings["SFI"]["BASE_PACKAGE_IDENTIFIER"]
     group = settings["SFI"]["APP_GROUP_IDENTIFIER"]
+    normalization = resolve_icloud_dictionary_key(args.app, base)
     apps = inventory(args.app, base, group)
     code = inspect_macho(args.app)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -169,6 +189,7 @@ def main():
               "packaging": "Manual Payload IPA from unsigned device build; not xcodebuild -exportArchive",
               "developerSigning": "NOT_PERFORMED", "deviceVPNValidation": "NOT_PERFORMED",
               "placeholderIdentity": True, "mainBundleID": base, "vpnBundleID": base + ".extension", "appGroup": group,
+              "unsignedMetadataNormalization": normalization,
               "requiredProfileCount": len(apps), "bundles": apps, "machO": code,
               "frameworks": [path.relative_to(args.app).as_posix() for path in sorted(args.app.rglob("*.framework"))],
               "swiftSystemLibraries": "Unbundled libswift dependencies are supplied by the supported iOS runtime; actual loading requires device validation."}

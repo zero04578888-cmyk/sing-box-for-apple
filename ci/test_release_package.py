@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from package_unsigned_release import EXTENSIONS, UPSTREAM, check_public_tree, inventory
+from package_unsigned_release import EXTENSIONS, UPSTREAM, check_public_tree, inventory, resolve_icloud_dictionary_key
 
 
 class ReleasePackageTests(unittest.TestCase):
@@ -59,6 +59,19 @@ class ReleasePackageTests(unittest.TestCase):
             path.write_bytes(plistlib.dumps(info))
             with self.assertRaisesRegex(ValueError, "iCloud document container"):
                 inventory(app, self.base, self.group)
+
+    def test_known_dictionary_key_template_is_resolved_without_losing_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            app = self.make_app(directory)
+            path = app / "Info.plist"
+            info = plistlib.loads(path.read_bytes())
+            info["NSUbiquitousContainers"] = {"iCloud.$(BASE_PACKAGE_IDENTIFIER)": {"NSUbiquitousContainerName": "sing-box"}}
+            path.write_bytes(plistlib.dumps(info))
+            change = resolve_icloud_dictionary_key(app, self.base)
+            self.assertEqual(change["to"], "iCloud." + self.base)
+            self.assertEqual(plistlib.loads(path.read_bytes())["NSUbiquitousContainers"]["iCloud." + self.base]["NSUbiquitousContainerName"], "sing-box")
+            self.assertEqual(len(inventory(app, self.base, self.group)), 7)
+            self.assertIsNone(resolve_icloud_dictionary_key(app, self.base))
 
     def test_profile_is_never_public_artifact_input(self):
         with tempfile.TemporaryDirectory() as directory:

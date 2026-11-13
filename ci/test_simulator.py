@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 
 class SimulatorSelectionTests(unittest.TestCase):
-    def execute(self, inventory):
+    def execute(self, inventory, device_name="iPhone 16 Pro Max"):
         with tempfile.TemporaryDirectory() as folder:
             environment_file = Path(folder) / "environment"
 
@@ -20,7 +20,7 @@ class SimulatorSelectionTests(unittest.TestCase):
                     return "created-device\n"
                 self.fail(f"Unexpected command: {command}")
 
-            with patch.dict(os.environ, {"GITHUB_ENV": str(environment_file)}), \
+            with patch.dict(os.environ, {"GITHUB_ENV": str(environment_file), "NEBULA_DEVICE_NAME": device_name}), \
                     patch("subprocess.check_output", side_effect=output) as read, \
                     patch("subprocess.run") as run:
                 runpy.run_path(str(Path(__file__).with_name("select_simulator.py")), run_name="__main__")
@@ -56,6 +56,15 @@ class SimulatorSelectionTests(unittest.TestCase):
         })
         self.assertIn("NEBULA_SIMULATOR_UDID=created-device", environment)
         self.assertEqual(reads[1].args[0], ["xcrun", "simctl", "create", "iPhone 16 Pro Max", "exact-device-type", "iOS-26-2"])
+
+    def test_tablet_capture_selects_requested_type_instead_of_phone(self):
+        environment, reads, runs = self.execute({
+            "runtimes": [{"identifier": "iOS-26-2", "version": "26.2", "isAvailable": True}],
+            "devices": {"iOS-26-2": [{"name": "iPhone 16 Pro Max", "udid": "phone", "state": "Booted", "isAvailable": True}]},
+            "devicetypes": [{"name": "iPad Pro 13-inch (M4)", "identifier": "tablet-type"}],
+        }, device_name="iPad Pro 13-inch (M4)")
+        self.assertIn("NEBULA_SIMULATOR_UDID=created-device", environment)
+        self.assertEqual(reads[1].args[0], ["xcrun", "simctl", "create", "iPad Pro 13-inch (M4)", "tablet-type", "iOS-26-2"])
 
 
 if __name__ == "__main__":

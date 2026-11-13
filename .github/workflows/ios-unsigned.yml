@@ -178,6 +178,32 @@ jobs:
             CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
             2>&1 | tee build-logs/ui-tests.log
 
+      - name: Prepare iPad native capture
+        if: env.RUN_UI_TESTS == 'true'
+        timeout-minutes: 10
+        env:
+          NEBULA_DEVICE_NAME: iPad Pro 13-inch (M4)
+        run: |
+          set -euo pipefail
+          xcrun simctl shutdown "$NEBULA_SIMULATOR_UDID"
+          python3 ci/select_simulator.py
+
+      - name: Capture native iPad dashboard fixture
+        if: env.RUN_UI_TESTS == 'true'
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          app=build/SimulatorData/Build/Products/Debug-iphonesimulator/SFI.app
+          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
+          mkdir -p build/TabletScreenshots
+          xcrun simctl install "$NEBULA_SIMULATOR_UDID" "$app"
+          SIMCTL_CHILD_SCREENSHOT_PAGE=dashboard xcrun simctl launch --terminate-running-process \
+            "$NEBULA_SIMULATOR_UDID" "$bundle_id" -FASTLANE_SNAPSHOT -AppleLanguages '(en)' -AppleLocale en_US
+          # Let the native initial layout settle; the exported PNG is reviewed before acceptance.
+          sleep 5
+          xcrun simctl io "$NEBULA_SIMULATOR_UDID" screenshot build/TabletScreenshots/NEBULA-Tablet-Dashboard.png
+          xcrun simctl list devices --json > build-logs/capture-devices.json
+
       - name: Record validation scope
         if: always()
         run: |
@@ -218,3 +244,4 @@ jobs:
             build/Unsigned-iOS.xcresult
             build/Nebula-UI.xcresult
             build/UIScreenshots/
+            build/TabletScreenshots/

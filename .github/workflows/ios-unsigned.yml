@@ -75,10 +75,10 @@ jobs:
 
       - name: Cache pinned Libbox build
         id: libbox-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: Libbox.xcframework
-          key: libbox-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ steps.dependency.outputs.revision }}-${{ steps.dependency.outputs.goVersion }}-${{ env.RUN_UI_TESTS }}-${{ hashFiles('ci/libbox.json', '.github/workflows/ios-unsigned.yml') }}
+          key: libbox-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ steps.dependency.outputs.revision }}-${{ steps.dependency.outputs.goVersion }}-${{ env.RUN_UI_TESTS }}-${{ hashFiles('ci/libbox.json', 'ci/build_libbox.sh') }}
 
       - name: Checkout unmodified official Libbox source
         if: steps.libbox-cache.outputs.cache-hit != 'true'
@@ -105,22 +105,22 @@ jobs:
           LIBBOX_PLATFORMS: ${{ steps.dependency.outputs.platforms }}
           GOTOOLCHAIN: local
         run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
-          make lib_install 2>&1 | tee ../../build-logs/libbox-tools.log
-          export PATH="$(go env GOPATH)/bin:$PATH"
-          go run ./cmd/internal/build_libbox -target apple -platform "$LIBBOX_PLATFORMS" 2>&1 | tee ../../build-logs/libbox-build.log
-          git diff --exit-code HEAD
-          cp -R Libbox.xcframework ../../Libbox.xcframework
+          bash ../../ci/build_libbox.sh
 
       - name: Verify required Framework slices
         run: |
           set -euo pipefail
-          args=()
+          args=(--check-xcode)
           if [[ "$RUN_UI_TESTS" == true ]]; then args+=(--require-simulator); fi
-          python3 ci/preflight.py --check-xcode "${args[@]}" | tee build-logs/preflight.txt
+          python3 ci/preflight.py "${args[@]}" | tee build-logs/preflight.txt
           cp ci/libbox.json build-logs/libbox-provenance.json
-          xcodebuild -list -project sing-box.xcodeproj -skipPackagePluginValidation 2>&1 | tee build-logs/schemes.log
+
+      - name: Save verified Libbox before application compilation
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: Libbox.xcframework
+          key: ${{ steps.libbox-cache.outputs.cache-primary-key }}
 
       - name: Resolve locked Swift packages
         run: |
@@ -166,6 +166,14 @@ jobs:
             echo 'No IPA export, credentials, signing certificates, or real subscriptions are used.'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Export native UI screenshot attachments
+        if: always() && env.RUN_UI_TESTS == 'true'
+        run: |
+          set -euo pipefail
+          if [[ -d build/Nebula-UI.xcresult ]]; then
+            xcrun xcresulttool export attachments --path build/Nebula-UI.xcresult --output-path build/UIScreenshots
+          fi
+
       - name: Upload diagnostic evidence only
         if: always()
         uses: actions/upload-artifact@v4
@@ -177,3 +185,4 @@ jobs:
             build-logs/
             build/Unsigned-iOS.xcresult
             build/Nebula-UI.xcresult
+            build/UIScreenshots/

@@ -19,6 +19,11 @@ final class NebulaUITests: XCTestCase {
         launch()
         let toggle = app.buttons["nebula.connection.toggle"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 15))
+        capture("Dashboard")
+        app.tabBars.buttons["Statistics"].tap()
+        XCTAssertTrue(app.staticTexts["Live service statistics"].waitForExistence(timeout: 10))
+        capture("Statistics")
+        app.tabBars.buttons["Dashboard"].tap()
         toggle.tap()
         XCTAssertTrue(app.staticTexts["Disconnected"].waitForExistence(timeout: 10))
         app.tabBars.buttons["Statistics"].tap()

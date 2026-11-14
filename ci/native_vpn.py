@@ -1,6 +1,6 @@
 """Identity and two-component boundaries for this native VPN distribution.
 
-Group authorization is user-reported for the MAIN app only. This does not grant
+Group authorization was locally audited for the MAIN app only. This does not grant
 the extension a profile, change Apple's authorization, or authorize installation.
 """
 import json
@@ -20,7 +20,7 @@ def validate_identity(base, group):
     if base != IDENTITY["baseBundleID"]:
         raise ValueError("Native VPN main Bundle ID must match the user-specified identity.")
     if group != IDENTITY["appGroup"]:
-        raise ValueError("App Group must be the exact user-reported authorized value; no generated placeholder is allowed.")
+        raise ValueError("App Group must be the exact audited main-profile value; no generated placeholder is allowed.")
     if IDENTITY["vpnExtensionBundleID"] != base + ".extension":
         raise ValueError("Packet Tunnel identifier must match AppConfiguration's derived provider ID.")
 
@@ -71,11 +71,25 @@ def validate_sources(root=ROOT):
         info = plistlib.loads((root/file).read_bytes())
         if info.get("NebulaNativeVPNOnly") is not True or "NSUbiquitousContainers" in info:
             raise ValueError(f"Native marker/iCloud metadata mismatch: {file}")
+        if info.get("BasePackageIdentifier") != "$(BASE_PACKAGE_IDENTIFIER)" or info.get("AppGroupIdentifier") != "$(APP_GROUP_IDENTIFIER)":
+            raise ValueError(f"Runtime identity must use the common build settings: {file}")
     for uuid in ["3AEC20CB2A45991900A63465", "3AEC20CC2A45991900A63465"]:
         body = objects[uuid]
         base = re.search(r"\bBASE_PACKAGE_IDENTIFIER = ([^;]+);", body)[1].strip('"')
         group = re.search(r"\bAPP_GROUP_IDENTIFIER = ([^;]+);", body)[1].strip('"')
         validate_identity(base, group)
+        if re.search(r"\bDEVELOPMENT_TEAM = ([^;]+);", body)[1].strip('"') != IDENTITY["signingTeamID"]:
+            raise ValueError("Unexpected native VPN default signing team")
+    for target in seen:
+        config_list = re.search(r"buildConfigurationList = ([0-9A-F]{24})", objects[target])[1]
+        for config in references(objects[config_list], "buildConfigurations"):
+            body = objects[config]
+            if re.search(r"\bDEVELOPMENT_TEAM = ([^;]+);", body)[1].strip('"') != IDENTITY["signingTeamID"]:
+                raise ValueError("Unexpected signing team in the native target closure")
+            if "CODE_SIGN_STYLE = Manual;" not in body:
+                raise ValueError("Native targets must not request automatic provisioning")
+            if 'CODE_SIGN_IDENTITY = "";' not in body:
+                raise ValueError("Native unsigned targets must not select a developer certificate")
     return {"targets": sorted(names), "embeddedExtensions": 1, "requiredProfiles": 2,
             "identity": IDENTITY, "extensionProfileStatus": "MISSING"}
 

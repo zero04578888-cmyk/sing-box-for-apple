@@ -1,14 +1,20 @@
-# Codemagic: NEBULA native VPN unsigned Release
+# Codemagic: QCBW52C8MV NEBULA native VPN unsigned Release
 
-This workflow builds the startup fix from `fix/nebula-shared-container-startup`
-(`fe3621df1eb0cff56b0c6446896929547d691a86`). Configuration and scripts are also
-present on that fix branch; the Swift sources remain unchanged. This does not change
-the existing NEBULA screens, Libbox source, protocols, Bundle IDs or App Group.
+Build branch `feat/nebula-qcbw52c8mv-native-vpn` carries the startup fix
+`fe3621df1eb0cff56b0c6446896929547d691a86` unchanged and migrates identity to:
+
+- Intended signing team: `QCBW52C8MV` (no developer signing in CI).
+- Main App: `app.turquoise204.lynx5076`.
+- Planned Packet Tunnel: `app.turquoise204.lynx5076.extension`.
+- Shared Group: `group.43f7b1421047676b.1`.
+
+The main profile was audited locally. Extension authorization/profile remains
+MISSING. Existing full/native/fix branches are preserved. No UI or core rewrite.
 
 ## Manual build
 
 1. Connect the existing public fork in Codemagic and select YAML configuration.
-2. Select branch `fix/nebula-shared-container-startup` and workflow
+2. Select branch `feat/nebula-qcbw52c8mv-native-vpn` and workflow
    `nebula-native-vpn-unsigned` from the root `codemagic.yaml`.
 3. Prefer the account's included M2 minutes; check remaining minutes/billing before starting. The instance is `mac_mini_m2`,
    with a 90-minute maximum. No automatic triggers are configured.
@@ -41,13 +47,14 @@ Framework cache is reused. A new device Framework is built on the selected host.
 
 The existing `ci/package_unsigned_release.py` validates and assembles the Payload
 IPA. `ci/collect_codemagic_release.py` checks all three Mach-O files are unsigned
-and have exactly matching UUID/architecture dSYMs before publishing the IPA.
+and have exactly matching UUID/architecture dSYMs before publishing the IPA. The collector also reopens the actual ZIP and verifies
+its App/extension identity and every file against the validated archive App.
 
 - `NEBULA-NativeVPN-StartupFix-Unsigned.ipa`
 - `NEBULA-NativeVPN-StartupFix-Unsigned.xcarchive.tar.gz`
 - `NEBULA-NativeVPN-dSYMs.tar.gz`
 - `Release-Archive.xcresult.tar.gz`
-- `release-inventory.json`, `dSYM-inventory.json`, `validation-report.json`
+- `release-inventory.json`, `ipa-verification.json`, `dSYM-inventory.json`, `validation-report.json`
 - `test-and-build-report.md`, `build-logs/`, `SHA256SUMS.txt`, `LICENSE`
 
 The full archive preserves App, Packet Tunnel, Frameworks, resources and dSYMs.
@@ -85,8 +92,8 @@ compilation/linking/packaging, not error-screen behavior on a device. Confirm th
 rejection screen and healthy launch separately on a test device after building.
 
 **A launch guard does not grant App Group authorization.** Native VPN still
-requires two separately matching profiles for `com.Ekg.IYmq` and
-`com.Ekg.IYmq.extension`, both authorizing `group.64AF44249V.hE6jb4` and the
+requires two separately matching profiles for `app.turquoise204.lynx5076` and
+`app.turquoise204.lynx5076.extension`, both authorizing `group.43f7b1421047676b.1` and the
 required Network Extension capability. A main profile is not an extension
 profile. Preserve the official App and never replace its Bundle ID or container.
 

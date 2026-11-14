@@ -8,8 +8,11 @@ import re
 import shutil
 import subprocess
 import tarfile
+import zipfile
 
 from package_unsigned_release import check_public_tree
+from native_vpn import IDENTITY
+from verify_native_vpn_ipa import verify_ipa
 
 ARCHIVE = Path("build/NEBULA-NativeVPN-StartupFix-Unsigned.xcarchive")
 APP = ARCHIVE / "Products/Applications/sing-box.app"
@@ -73,10 +76,11 @@ def main():
     if args.exit_status == 0:
         try:
             inventory = json.loads(Path("dist/release-inventory.json").read_text())
+            ipa_verification = verify_ipa(Path("dist/NEBULA-NativeVPN-Unsigned.ipa"), APP)
             symbols = verify_symbols(ARCHIVE, APP, inventory)
             if not Path("dist/NEBULA-NativeVPN-Unsigned.ipa").is_file():
                 raise ValueError("Missing validated unsigned IPA")
-        except (ValueError, OSError, KeyError, subprocess.CalledProcessError) as error:
+        except (ValueError, OSError, KeyError, zipfile.BadZipFile, subprocess.CalledProcessError) as error:
             evidence_error = str(error)
     success = args.exit_status == 0 and evidence_error is None
     public = Path("codemagic-artifacts")
@@ -87,6 +91,7 @@ def main():
         shutil.copyfile("dist/NEBULA-NativeVPN-Unsigned.ipa", public / "NEBULA-NativeVPN-StartupFix-Unsigned.ipa")
         shutil.copyfile("dist/release-inventory.json", public / "release-inventory.json")
         (public / "dSYM-inventory.json").write_text(json.dumps(symbols, indent=2) + "\n")
+        (public / "ipa-verification.json").write_text(json.dumps(ipa_verification, indent=2) + "\n")
     for path, name in ((ARCHIVE, ARCHIVE.name), (ARCHIVE / "dSYMs", "NEBULA-NativeVPN-dSYMs"),
                        (Path("build/Release-Archive.xcresult"), "Release-Archive.xcresult")):
         if path.is_dir():
@@ -104,6 +109,9 @@ def main():
               "sourceTestsRun": int(count[-1]) if count else None,
               "sourceTestScope": "Dependency, package and artifact invariants; not a running iOS app",
               "matchingDSYMs": len(symbols), "developerSigning": "NOT_PERFORMED",
+              "mainBundleID": IDENTITY["baseBundleID"], "vpnExtensionBundleID": IDENTITY["vpnExtensionBundleID"],
+              "appGroup": IDENTITY["appGroup"], "intendedSigningTeamID": IDENTITY["signingTeamID"],
+              "extensionAuthorization": "NOT_CONFIRMED; independent matching profile still required",
               "appLaunchValidation": "NOT_PERFORMED", "physicalDeviceVPN": "NOT_PERFORMED",
               "signingReadiness": "Two separately matching profiles with the required common Group are still required"}
     (public / "validation-report.json").write_text(json.dumps(report, indent=2) + "\n")

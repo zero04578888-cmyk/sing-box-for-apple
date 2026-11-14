@@ -71,6 +71,11 @@ def inventory(app, base, group):
         if bundle == app:
             if info.get("BGTaskSchedulerPermittedIdentifiers") != [base + ".update_profiles"]:
                 raise ValueError("Background-task identifier does not match runtime identity.")
+            for field in ["UTExportedTypeDeclarations", "UTImportedTypeDeclarations"]:
+                if {item.get("UTTypeIdentifier") for item in info.get(field, [])} != {base + ".profile"}:
+                    raise ValueError("Profile document type does not match runtime identity.")
+            if {kind for item in info.get("CFBundleDocumentTypes", []) for kind in item.get("LSItemContentTypes", [])} != {base + ".profile"}:
+                raise ValueError("Profile document association does not match runtime identity.")
             if "NSUbiquitousContainers" in info:
                 raise ValueError("iCloud document containers are not authorized for this native VPN build.")
         result.append({"path": "." if bundle == app else bundle.relative_to(app).as_posix(),
@@ -173,6 +178,7 @@ def main():
               "packaging": "Manual Payload IPA from unsigned device build; not xcodebuild -exportArchive",
               "developerSigning": "NOT_PERFORMED", "deviceVPNValidation": "NOT_PERFORMED",
               "placeholderIdentity": False, "mainBundleID": base, "vpnBundleID": base + ".extension", "appGroup": group,
+              "intendedSigningTeamID": IDENTITY["signingTeamID"],
               "distribution": "native-vpn", "authorizationEvidence": IDENTITY["groupAuthorizationEvidence"],
               "extensionProfileStatus": "MISSING", "signatureReadiness": "BLOCKED_EXTENSION_PROFILE_REQUIRED",
               "removedCapabilities": ["iCloud", "WidgetExtension", "IntentsExtension", "FileProviderExtension", "ShareExtension", "ActionExtension", "wifi-info entitlement", "multicast entitlement"],

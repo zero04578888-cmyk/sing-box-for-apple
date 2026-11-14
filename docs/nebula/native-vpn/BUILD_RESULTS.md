@@ -1,4 +1,6 @@
-# 精简版云端构建与签名状态
+# 历史：旧身份精简版云端构建与签名状态
+
+> 以下是旧身份与旧提交的历史成功记录，不是 QCBW52C8MV 新身份版本的编译或 VPN 验收证明。当前分支、标识和待构建状态见 [README](README.md)。
 
 **源码适配、云端无签名 Release 构建与下载复核通过；签名 BLOCKED_EXTENSION_PROFILE_REQUIRED。**
 

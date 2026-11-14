@@ -113,6 +113,14 @@ open class ExtensionProvider: NEPacketTunnelProvider {
     #endif
 
     override public init() {
+        #if os(iOS)
+            do {
+                _ = try FilePath.requireSharedDirectory()
+            } catch {
+                super.init()
+                return
+            }
+        #endif
         LibboxPrepareCrashSignalHandlers()
         #if os(macOS)
             if Variant.useSystemExtension {
@@ -131,6 +139,10 @@ open class ExtensionProvider: NEPacketTunnelProvider {
     }
 
     override open func startTunnel(options startOptions: [String: NSObject]?) async throws {
+        #if os(iOS)
+            // The extension is signed independently; the host check cannot grant access.
+            _ = try FilePath.requireSharedDirectory()
+        #endif
         let basePath: String
         let workingPath: String
         let tempPath: String

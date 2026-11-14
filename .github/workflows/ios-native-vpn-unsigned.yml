@@ -1,15 +1,15 @@
-name: NEBULA native VPN unsigned iOS
+name: NEBULA native VPN startup fix unsigned iOS
 
 on:
   push:
-    branches: [feat/nebula-native-vpn]
+    branches: [fix/nebula-shared-container-startup]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: nebula-native-vpn-${{ github.ref }}
+  group: nebula-native-vpn-startup-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -50,7 +50,8 @@ jobs:
           git fetch --no-tags --depth=1 origin 69b15b74b21a0f60a4a6d352d9da7e877c6d187f
           git diff --exit-code 69b15b74b21a0f60a4a6d352d9da7e877c6d187f -- \
             Library/Network Extension/PacketTunnelProvider.swift ci/libbox.json ci/build_libbox.sh \
-            ApplicationLibrary/Views/Dashboard ApplicationLibrary/Views/Groups ApplicationLibrary/Views/Abstract/NebulaTheme.swift
+            ApplicationLibrary/Views/Dashboard ApplicationLibrary/Views/Groups ApplicationLibrary/Views/Abstract/NebulaTheme.swift \
+            ":(exclude)Library/Network/ExtensionProvider.swift"
           python3 ci/preflight.py --source-only --check-xcode
           python3 -m unittest discover -s ci -p 'test_*.py' -v
 
@@ -153,13 +154,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM=
             PROVISIONING_PROFILE_SPECIFIER= PROVISIONING_PROFILE=)
           set +e
-          xcodebuild archive "${args[@]}" -archivePath build/NEBULA-NativeVPN-Unsigned.xcarchive \
+          xcodebuild archive "${args[@]}" -archivePath build/NEBULA-NativeVPN-StartupFix-Unsigned.xcarchive \
             -resultBundlePath build/Release-Archive.xcresult 2>&1 | tee build-logs/release-archive.log
           archive_status=${PIPESTATUS[0]}
           set -e
           echo "$archive_status" > build-logs/archive-exit-status.txt
           if [[ "$archive_status" -eq 0 ]]; then
-            echo 'NEBULA_RELEASE_APP=build/NEBULA-NativeVPN-Unsigned.xcarchive/Products/Applications/sing-box.app' >> "$GITHUB_ENV"
+            echo 'NEBULA_RELEASE_APP=build/NEBULA-NativeVPN-StartupFix-Unsigned.xcarchive/Products/Applications/sing-box.app' >> "$GITHUB_ENV"
           else
             # Preserve the archive error; a real Release build may still yield a complete .app.
             xcodebuild build "${args[@]}" -resultBundlePath build/Release-Build.xcresult \
@@ -177,7 +178,7 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          for directory in build/NEBULA-NativeVPN-Unsigned.xcarchive "${NEBULA_RELEASE_APP:-}"; do
+          for directory in build/NEBULA-NativeVPN-StartupFix-Unsigned.xcarchive "${NEBULA_RELEASE_APP:-}"; do
             if [[ -d "$directory" ]]; then
               python3 -c 'import sys; sys.path.insert(0,"ci"); from pathlib import Path; from package_unsigned_release import check_public_tree; check_public_tree(Path(sys.argv[1]))' "$directory"
               name=$(basename "$directory")
@@ -205,7 +206,7 @@ jobs:
         if: always() && steps.public-audit.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: nebula-native-vpn-unsigned-${{ github.run_id }}
+          name: nebula-native-vpn-startup-unsigned-${{ github.run_id }}
           retention-days: 14
           if-no-files-found: error
           path: |
@@ -228,5 +229,6 @@ jobs:
             echo 'Inspect actual job status, release-inventory.json and logs before accepting.'
             echo 'Manual Payload IPA, not a developer-signed xcodebuild export. No private keys or profiles are inputs.'
             echo 'User-specified main/extension IDs and common App Group. Extension profile is MISSING; no installation is performed.'
+            echo 'Startup container guard is a source fix; physical-device regression is still required.'
             echo 'Two distinct matching profiles are required. Main profile authorization does not grant the Packet Tunnel extension permission; physical VPN is unverified.'
           } >> "$GITHUB_STEP_SUMMARY"

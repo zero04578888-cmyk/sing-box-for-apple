@@ -12,6 +12,12 @@ class ApplicationDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCe
     private var reportTransferServer: ReportTransferServer?
 
     func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        do {
+            _ = try FilePath.requireSharedDirectory()
+        } catch {
+            NSLog("Startup blocked: \(error.localizedDescription)")
+            return true
+        }
         LibboxPrepareCrashSignalHandlers()
         NativeCrashReporter.installForCurrentProcess()
         LibboxReinstallCrashSignalHandlers()

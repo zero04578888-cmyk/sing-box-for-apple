@@ -6,6 +6,17 @@ public enum FilePath {
 
     private static let defaultSharedDirectory: URL! = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupName)
 
+    /// Check this before constructing services that use sharedDirectory. Missing
+    /// signing authorization is a startup error, not a reason to use private storage.
+    public static func requireSharedDirectory() throws -> URL {
+        guard let directory = defaultSharedDirectory else {
+            throw NSError(domain: "SharedContainer", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: String(localized: "Cannot access shared App Group: \(groupName). Re-sign the app and Packet Tunnel with separate matching profiles that authorize this group."),
+            ])
+        }
+        return directory
+    }
+
     #if os(iOS)
         public static let sharedDirectory = defaultSharedDirectory!
     #elseif os(tvOS)

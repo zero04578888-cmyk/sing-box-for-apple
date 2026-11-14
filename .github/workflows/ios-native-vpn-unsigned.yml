@@ -2,18 +2,23 @@ name: NEBULA native VPN unsigned iOS
 
 on:
   push:
-    branches: [feat/nebula-native-vpn]
+    branches: [feat/nebula-native-vpn, diag/nebula-launch-evidence]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: nebula-native-vpn-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  symbols:
+    if: github.ref == 'refs/heads/diag/nebula-launch-evidence'
+    uses: ./.github/workflows/ios-release-symbol-audit.yml
   release:
+    if: github.ref != 'refs/heads/diag/nebula-launch-evidence'
     # Standard Intel image avoids the ARM64 hosted-runner capacity failure observed in run 43416381403.
     runs-on: macos-15-intel
     timeout-minutes: 90

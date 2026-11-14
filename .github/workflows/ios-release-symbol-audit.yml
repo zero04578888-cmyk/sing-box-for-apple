@@ -1,8 +1,7 @@
 name: NEBULA original Release symbol audit
 
 on:
-  push:
-    branches: [diag/nebula-launch-evidence]
+  workflow_call:
   workflow_dispatch:
 
 permissions:

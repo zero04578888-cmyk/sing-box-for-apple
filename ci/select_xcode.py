@@ -18,6 +18,8 @@ if not candidates:
     raise SystemExit("No installed Xcode >= 26.2. Select a compatible macOS runner image; no build was attempted.")
 version, developer = sorted(candidates)[0]
 subprocess.run(["sudo", "xcode-select", "--switch", developer], check=True)
-with open(os.environ["GITHUB_ENV"], "a") as output:
-    print(f"DEVELOPER_DIR={developer}", file=output)
+env_file = os.environ.get("GITHUB_ENV") or os.environ.get("CM_ENV")
+if env_file:
+    with open(env_file, "a") as output:
+        print(f"DEVELOPER_DIR={developer}", file=output)
 print(f"Selected Xcode {version}: {developer}")

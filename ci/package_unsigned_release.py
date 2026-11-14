@@ -167,7 +167,9 @@ def main():
             raise ValueError(f"Missing requested packet-tunnel-provider: {target}")
         (entitlements_dir / (target_settings["PRODUCT_BUNDLE_IDENTIFIER"] + ".requested.plist")).write_bytes(plistlib.dumps(entitlements))
     report = {"commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
-              "runID": os.environ.get("GITHUB_RUN_ID"), "configuration": "Release", "platform": "iPhoneOS",
+              "runID": os.environ.get("GITHUB_RUN_ID") or os.environ.get("CM_BUILD_ID"),
+              "ciProvider": "Codemagic" if os.environ.get("CM_BUILD_ID") else "GitHub Actions" if os.environ.get("GITHUB_RUN_ID") else "local",
+              "configuration": "Release", "platform": "iPhoneOS",
               "packaging": "Manual Payload IPA from unsigned device build; not xcodebuild -exportArchive",
               "developerSigning": "NOT_PERFORMED", "deviceVPNValidation": "NOT_PERFORMED",
               "placeholderIdentity": False, "mainBundleID": base, "vpnBundleID": base + ".extension", "appGroup": group,

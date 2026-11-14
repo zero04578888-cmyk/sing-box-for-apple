@@ -27,5 +27,7 @@ AGENTS.md
 !.env.example
 /build-logs/
 /.ci/
+/codemagic-artifacts/
+/dist/
 __pycache__/
 *.py[cod]

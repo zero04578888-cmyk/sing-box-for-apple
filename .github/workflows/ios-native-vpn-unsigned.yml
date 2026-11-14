@@ -1,37 +1,232 @@
-name: NEBULA original Release symbol audit
+name: NEBULA native VPN unsigned iOS
 
 on:
   push:
-    branches: [diag/nebula-launch-evidence]
+    branches: [feat/nebula-native-vpn]
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
+
+concurrency:
+  group: nebula-native-vpn-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  symbols:
+  release:
+    # Standard Intel image avoids the ARM64 hosted-runner capacity failure observed in run 43416381403.
     runs-on: macos-15-intel
-    timeout-minutes: 20
+    timeout-minutes: 90
+    env:
+      DISABLE_SWIFTLINT: '1'
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           persist-credentials: false
-      - name: Select Xcode
-        run: python3 ci/select_xcode.py
-      - name: Download existing public unsigned Release (no rebuild)
-        uses: actions/download-artifact@v4
+
+      - name: Select and record Xcode
+        run: |
+          set -euo pipefail
+          mkdir -p build-logs dist
+          python3 ci/select_xcode.py
+          xcodebuild -version | tee build-logs/xcode.txt
+          xcodebuild -showsdks > build-logs/sdks.txt
+          uname -m > build-logs/runner-architecture.txt
+          sw_vers > build-logs/macos.txt
+          git rev-parse HEAD > build-logs/commit.txt
+          python3 ci/native_vpn.py > build-logs/native-vpn-source-audit.json
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          identity = json.loads(Path('ci/native_vpn_identity.json').read_text())
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              print('BASE_PACKAGE_IDENTIFIER=' + identity['baseBundleID'], file=output)
+              print('APP_GROUP_IDENTIFIER=' + identity['appGroup'], file=output)
+          PY
+          git fetch --no-tags --depth=1 origin 69b15b74b21a0f60a4a6d352d9da7e877c6d187f
+          git diff --exit-code 69b15b74b21a0f60a4a6d352d9da7e877c6d187f -- \
+            Library/Network Extension/PacketTunnelProvider.swift ci/libbox.json ci/build_libbox.sh \
+            ApplicationLibrary/Views/Dashboard ApplicationLibrary/Views/Groups ApplicationLibrary/Views/Abstract/NebulaTheme.swift
+          python3 ci/preflight.py --source-only --check-xcode
+          python3 -m unittest discover -s ci -p 'test_*.py' -v
+
+      - name: Read pinned dependency
+        id: dependency
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          dep = json.loads(Path('ci/libbox.json').read_text())
+          xcode = subprocess.check_output(['xcodebuild', '-version'], text=True).splitlines()[-1].replace(' ', '-')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key in ['repository', 'revision', 'goVersion', 'upstreamTag']:
+                  print(f'{key}={dep[key]}', file=output)
+              print(f'xcode={xcode}', file=output)
+          PY
+
+      - name: Restore verified device Libbox
+        id: libbox-cache
+        uses: actions/cache/restore@v4
         with:
-          name: nebula-native-vpn-unsigned-43436217497
-          run-id: 43436217497
-          github-token: ${{ github.token }}
-          path: original-release
-      - name: Verify provenance and inspect matching symbols
-        run: python3 ci/audit_release_symbols.py original-release evidence
-      - name: Upload public binary analysis only
+          path: Libbox.xcframework
+          key: libbox-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ steps.dependency.outputs.revision }}-${{ steps.dependency.outputs.goVersion }}-false-${{ hashFiles('ci/libbox.json', 'ci/build_libbox.sh') }}
+
+      - name: Checkout official core when cache is missing
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.dependency.outputs.repository }}
+          ref: ${{ steps.dependency.outputs.revision }}
+          path: .ci/core
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-go@v5
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        with:
+          go-version: ${{ steps.dependency.outputs.goVersion }}
+          cache-dependency-path: .ci/core/go.sum
+
+      - name: Build unmodified official Libbox
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        working-directory: .ci/core
+        env:
+          EXPECTED_REVISION: ${{ steps.dependency.outputs.revision }}
+          EXPECTED_TAG: ${{ steps.dependency.outputs.upstreamTag }}
+          LIBBOX_PLATFORMS: ios/arm64
+          GOTOOLCHAIN: local
+        run: bash ../../ci/build_libbox.sh
+
+      - name: Verify required Framework
+        run: |
+          set -euo pipefail
+          python3 ci/preflight.py --check-xcode | tee build-logs/preflight.txt
+          cp ci/libbox.json build-logs/libbox-provenance.json
+
+      - uses: actions/cache/save@v4
+        if: steps.libbox-cache.outputs.cache-hit != 'true'
+        with:
+          path: Libbox.xcframework
+          key: ${{ steps.libbox-cache.outputs.cache-primary-key }}
+
+      - name: Restore locked Swift packages
+        id: swift-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: swift-packages-${{ runner.os }}-${{ runner.arch }}-${{ steps.dependency.outputs.xcode }}-${{ hashFiles('sing-box.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Resolve locked packages and record Release settings
+        run: |
+          set -euo pipefail
+          xcodebuild -resolvePackageDependencies -project sing-box.xcodeproj -scheme SFI \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -onlyUsePackageVersionsFromResolvedFile -skipPackagePluginValidation 2>&1 | tee build-logs/packages.log
+          git diff --exit-code -- sing-box.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          xcodebuild -showBuildSettings -json -project sing-box.xcodeproj -configuration Release -sdk iphoneos \
+            -target SFI -target Extension \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -disableAutomaticPackageResolution -skipPackagePluginValidation \
+            BASE_PACKAGE_IDENTIFIER="$BASE_PACKAGE_IDENTIFIER" APP_GROUP_IDENTIFIER="$APP_GROUP_IDENTIFIER" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM= \
+            > build-logs/release-build-settings.json
+
+      - uses: actions/cache/save@v4
+        if: steps.swift-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: ${{ steps.swift-cache.outputs.cache-primary-key }}
+
+      - name: Archive Release without developer signing
+        run: |
+          set -euo pipefail
+          args=(-project sing-box.xcodeproj -scheme SFI -configuration Release
+            -destination 'generic/platform=iOS' -derivedDataPath build/ReleaseData
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
+            -disableAutomaticPackageResolution -skipPackagePluginValidation
+            "BASE_PACKAGE_IDENTIFIER=$BASE_PACKAGE_IDENTIFIER" "APP_GROUP_IDENTIFIER=$APP_GROUP_IDENTIFIER"
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY= DEVELOPMENT_TEAM=
+            PROVISIONING_PROFILE_SPECIFIER= PROVISIONING_PROFILE=)
+          set +e
+          xcodebuild archive "${args[@]}" -archivePath build/NEBULA-NativeVPN-Unsigned.xcarchive \
+            -resultBundlePath build/Release-Archive.xcresult 2>&1 | tee build-logs/release-archive.log
+          archive_status=${PIPESTATUS[0]}
+          set -e
+          echo "$archive_status" > build-logs/archive-exit-status.txt
+          if [[ "$archive_status" -eq 0 ]]; then
+            echo 'NEBULA_RELEASE_APP=build/NEBULA-NativeVPN-Unsigned.xcarchive/Products/Applications/sing-box.app' >> "$GITHUB_ENV"
+          else
+            # Preserve the archive error; a real Release build may still yield a complete .app.
+            xcodebuild build "${args[@]}" -resultBundlePath build/Release-Build.xcresult \
+              2>&1 | tee build-logs/release-build-fallback.log
+            echo 'NEBULA_RELEASE_APP=build/ReleaseData/Build/Products/Release-iphoneos/sing-box.app' >> "$GITHUB_ENV"
+          fi
+
+      - name: Validate the two-component native VPN IPA
+        run: |
+          set -euo pipefail
+          python3 ci/package_unsigned_release.py --app "$NEBULA_RELEASE_APP" \
+            --build-settings build-logs/release-build-settings.json --output dist
+
+      - name: Preserve complete uncompressed build trees as tar archives
+        if: always()
+        run: |
+          set -euo pipefail
+          for directory in build/NEBULA-NativeVPN-Unsigned.xcarchive "${NEBULA_RELEASE_APP:-}"; do
+            if [[ -d "$directory" ]]; then
+              python3 -c 'import sys; sys.path.insert(0,"ci"); from pathlib import Path; from package_unsigned_release import check_public_tree; check_public_tree(Path(sys.argv[1]))' "$directory"
+              name=$(basename "$directory")
+              tar -czf "dist/$name.tar.gz" -C "$(dirname "$directory")" "$name"
+            fi
+          done
+
+      - name: Audit public delivery files
+        id: public-audit
+        if: always()
+        run: |
+          set -euo pipefail
+          cp -R docs/nebula/native-vpn dist/native-vpn-guides
+          cp LICENSE dist/LICENSE
+          python3 -c 'import sys; sys.path.insert(0,"ci"); from pathlib import Path; from package_unsigned_release import check_public_tree; check_public_tree(Path("dist")); check_public_tree(Path("build-logs"))'
+          python3 - <<'PY'
+          import hashlib
+          from pathlib import Path
+          root = Path('dist')
+          paths = [p for p in sorted(root.rglob('*')) if p.is_file() and p.name != 'SHA256SUMS.txt' and 'ipa-staging' not in p.parts]
+          (root/'SHA256SUMS.txt').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(root)}\n' for p in paths))
+          PY
+
+      - name: Upload complete unsigned delivery
+        if: always() && steps.public-audit.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: nebula-original-release-symbols-${{ github.run_id }}
-          path: evidence/
-          if-no-files-found: error
+          name: nebula-native-vpn-unsigned-${{ github.run_id }}
           retention-days: 14
+          if-no-files-found: error
+          path: |
+            dist/NEBULA-NativeVPN-Unsigned.ipa
+            dist/*.tar.gz
+            dist/release-inventory.json
+            dist/requested-entitlements/
+            dist/native-vpn-guides/
+            dist/SHA256SUMS.txt
+            dist/LICENSE
+            build-logs/
+            build/Release-Archive.xcresult
+            build/Release-Build.xcresult
+
+      - name: State validation boundary
+        if: always()
+        run: |
+          {
+            echo '## Native VPN unsigned delivery'
+            echo 'Inspect actual job status, release-inventory.json and logs before accepting.'
+            echo 'Manual Payload IPA, not a developer-signed xcodebuild export. No private keys or profiles are inputs.'
+            echo 'User-specified main/extension IDs and common App Group. Extension profile is MISSING; no installation is performed.'
+            echo 'Two distinct matching profiles are required. Main profile authorization does not grant the Packet Tunnel extension permission; physical VPN is unverified.'
+          } >> "$GITHUB_STEP_SUMMARY"

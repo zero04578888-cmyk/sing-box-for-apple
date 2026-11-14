@@ -29,6 +29,7 @@ jobs:
       - name: Verify provenance and inspect matching symbols
         run: python3 ci/audit_release_symbols.py original-release evidence
       - name: Upload public binary analysis only
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nebula-original-release-symbols-${{ github.run_id }}
